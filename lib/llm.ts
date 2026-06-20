@@ -63,6 +63,8 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
   const region = keyRecord.awsRegion ?? "us-east-1"
   const accessKeyId = keyRecord.awsAccessKeyId ?? ""
 
+  console.log("[v0] Bedrock call - Region:", region, "AccessKeyId hint:", accessKeyId.substring(0, 4) + "...")
+
   const client = new BedrockRuntimeClient({
     region,
     credentials: {
@@ -78,6 +80,8 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
   })
 
   const modelId = keyRecord.model?.trim() || "anthropic.claude-3-5-sonnet-20241022-v2:0"
+  console.log("[v0] Bedrock modelId:", modelId)
+
   const command = new InvokeModelCommand({
     modelId,
     contentType: "application/json",
@@ -85,20 +89,45 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
     body: Buffer.from(body),
   })
 
-  const response = await client.send(command)
-  const result = JSON.parse(Buffer.from(response.body).toString())
-  
-  // Extract text from Claude response structure
-  // Claude returns { "content": [{ "type": "text", "text": "..." }] }
-  let text = ""
-  if (result.content && Array.isArray(result.content) && result.content.length > 0) {
-    const firstContent = result.content[0]
-    text = firstContent.text ?? ""
+  try {
+    const response = await client.send(command)
+    console.log("[v0] Bedrock response status:", response.$metadata?.httpStatusCode)
+    
+    const result = JSON.parse(Buffer.from(response.body).toString())
+    console.log("[v0] Bedrock parsed response:", JSON.stringify(result).substring(0, 300))
+    
+    // Check for Bedrock error in response
+    if (result.error) {
+      console.error("[v0] Bedrock error response:", result.error)
+      throw new Error(`Bedrock API error: ${result.error}`)
+    }
+    
+    // Extract text from Claude response structure
+    // Claude returns { "content": [{ "type": "text", "text": "..." }] }
+    let text = ""
+    if (result.content && Array.isArray(result.content) && result.content.length > 0) {
+      const firstContent = result.content[0]
+      text = firstContent.text ?? ""
+    }
+    
+    if (!text) {
+      console.error("[v0] Bedrock returned empty text. Full response:", JSON.stringify(result))
+      throw new Error("Bedrock returned an empty response. Verify: 1) AWS Access Key ID and Secret Key are correct, 2) Bedrock is enabled for the model in your region, 3) The model ID is valid.")
+    }
+    
+    return text
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    console.error("[v0] Bedrock call failed:", errorMsg)
+    
+    // Re-throw with more context about what might be wrong
+    if (errorMsg.includes("InvalidSignatureException") || errorMsg.includes("UnrecognizedClientException")) {
+      throw new Error("AWS credentials are invalid or expired. Check your Access Key ID and Secret Access Key in Settings.")
+    }
+    if (errorMsg.includes("AccessDenied") || errorMsg.includes("ValidationException")) {
+      throw new Error("Cannot access this Bedrock model. Check that Bedrock is enabled for this model in your AWS region, and your IAM user has permission to invoke models.")
+    }
+    
+    throw error
   }
-  
-  if (!text) {
-    throw new Error("Bedrock returned an empty response. Check your AWS credentials and model ID.")
-  }
-  
-  return text
 }
