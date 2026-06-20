@@ -20,6 +20,7 @@ interface LlmKeyFormProps {
     provider: string
     keyHint: string | null
     model: string | null
+    apiFormat: string | null
     awsRegion: string | null
     awsAccessKeyId: string | null
   } | null
@@ -42,6 +43,11 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
       ? (existing.model ?? 'minimax.minimax-m2.5')
       : 'minimax.minimax-m2.5'
   )
+  const [bedrockApiFormat, setBedrockApiFormat] = useState<'openai' | 'anthropic'>(
+    existing?.provider === 'bedrock'
+      ? ((existing.apiFormat as 'openai' | 'anthropic') ?? 'openai')
+      : 'openai'
+  )
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -53,6 +59,7 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
     const result = await saveLlmKey({
       provider,
       model: provider === 'openai' ? openaiModel : bedrockModel,
+      apiFormat: provider === 'bedrock' ? bedrockApiFormat : undefined,
       openaiKey: provider === 'openai' ? openaiKey : undefined,
       awsAccessKeyId: provider === 'bedrock' ? awsAccessKeyId : undefined,
       awsSecretKey: provider === 'bedrock' ? awsSecretKey : undefined,
@@ -134,6 +141,22 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
 
             {/* ── AWS Bedrock ── */}
             <TabsContent value="bedrock" className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="bedrock-api-format">API Format</Label>
+                <Select value={bedrockApiFormat} onValueChange={(v) => setBedrockApiFormat(v as 'openai' | 'anthropic')}>
+                  <SelectTrigger id="bedrock-api-format">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="openai">OpenAI format</SelectItem>
+                    <SelectItem value="anthropic">Anthropic format</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select the API format your model uses (e.g., OpenAI format for Minimax, Anthropic format for Claude).
+                </p>
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="bedrock-model">Model ID</Label>
                 <Input

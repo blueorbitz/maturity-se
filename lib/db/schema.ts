@@ -125,6 +125,7 @@ export const responses = pgTable("responses", {
 })
 
 export type LlmProvider = "openai" | "bedrock"
+export type ApiFormat = "openai" | "anthropic"
 
 export const llmKeys = pgTable("llm_keys", {
   id: text("id").primaryKey(),
@@ -133,6 +134,7 @@ export const llmKeys = pgTable("llm_keys", {
   encryptedKey: text("encryptedKey").notNull(),
   keyHint: text("keyHint"),
   model: text("model"),
+  apiFormat: text("apiFormat").notNull().default("anthropic").$type<ApiFormat>(),
   awsRegion: text("awsRegion"),
   awsAccessKeyId: text("awsAccessKeyId"),
   encryptedAwsSecretKey: text("encryptedAwsSecretKey"),

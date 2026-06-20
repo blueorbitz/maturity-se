@@ -9,6 +9,7 @@ export type LlmKeyRecord = {
   provider: LlmProvider
   encryptedKey: string
   model?: string | null
+  apiFormat?: "openai" | "anthropic"
   awsRegion?: string | null
   awsAccessKeyId?: string | null
   encryptedAwsSecretKey?: string | null
@@ -72,17 +73,18 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
   })
 
   const modelId = keyRecord.model?.trim() || "minimax.minimax-m2.5"
+  const apiFormat = keyRecord.apiFormat ?? "anthropic"
   
-  // Determine request format based on model provider
+  // Build request based on API format
   let requestBody: string
-  if (modelId.includes("minimax")) {
-    // Minimax uses OpenAI format (no model field in body, no anthropic_version)
+  if (apiFormat === "openai") {
+    // OpenAI format (used by models like Minimax)
     requestBody = JSON.stringify({
       messages: [{ role: "user", content: prompt }],
       max_tokens: 4096,
     })
   } else {
-    // Anthropic/Claude models use the Anthropic format
+    // Anthropic format (used by Claude, etc.)
     requestBody = JSON.stringify({
       anthropic_version: "bedrock-2023-05-31",
       max_tokens: 4096,
@@ -106,13 +108,13 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
       throw new Error(`Bedrock API error: ${result.error}`)
     }
     
-    // Extract text based on model format
+    // Extract text based on API format
     let text = ""
-    if (modelId.includes("minimax")) {
-      // Minimax returns OpenAI format: { "choices": [{ "message": { "content": "..." } }] }
+    if (apiFormat === "openai") {
+      // OpenAI format: { "choices": [{ "message": { "content": "..." } }] }
       text = result.choices?.[0]?.message?.content ?? ""
     } else {
-      // Anthropic/Claude returns { "content": [{ "type": "text", "text": "..." }] }
+      // Anthropic format: { "content": [{ "type": "text", "text": "..." }] }
       text = result.content?.[0]?.text ?? ""
     }
     

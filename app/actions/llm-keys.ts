@@ -12,6 +12,7 @@ import { z } from "zod"
 const SaveKeySchema = z.object({
   provider: z.enum(["openai", "bedrock"]),
   model: z.string().max(200).optional(),
+  apiFormat: z.enum(["openai", "anthropic"]).optional(),
   openaiKey: z.string().max(300).optional(),
   awsAccessKeyId: z.string().max(200).optional(),
   awsSecretKey: z.string().max(300).optional(),
@@ -37,10 +38,11 @@ export async function saveLlmKey(
 
       const [existing] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
       const model = data.model?.trim() || "gpt-4o-mini"
+      const apiFormat = "openai"
       if (existing) {
-        await db.update(llmKeys).set({ provider: "openai", encryptedKey, keyHint, model, awsRegion: null, awsAccessKeyId: null, encryptedAwsSecretKey: null, updatedAt: now }).where(eq(llmKeys.userId, userId))
+        await db.update(llmKeys).set({ provider: "openai", encryptedKey, keyHint, model, apiFormat, awsRegion: null, awsAccessKeyId: null, encryptedAwsSecretKey: null, updatedAt: now }).where(eq(llmKeys.userId, userId))
       } else {
-        await db.insert(llmKeys).values({ id: nanoid(), userId, provider: "openai", encryptedKey, keyHint, model, createdAt: now, updatedAt: now })
+        await db.insert(llmKeys).values({ id: nanoid(), userId, provider: "openai", encryptedKey, keyHint, model, apiFormat, createdAt: now, updatedAt: now })
       }
     } else {
       const secretKey = data.awsSecretKey?.trim()
@@ -52,11 +54,12 @@ export async function saveLlmKey(
       const keyHint = `${accessKeyId.slice(0, 4)}...${accessKeyId.slice(-4)}`
 
       const [existing] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
-      const model = data.model?.trim() || "anthropic.claude-3-5-sonnet-20241022-v2:0"
+      const model = data.model?.trim() || "minimax.minimax-m2.5"
+      const apiFormat = data.apiFormat ?? "openai"
       if (existing) {
-        await db.update(llmKeys).set({ provider: "bedrock", encryptedKey, keyHint, model, awsRegion: region, awsAccessKeyId: accessKeyId, encryptedAwsSecretKey: null, updatedAt: now }).where(eq(llmKeys.userId, userId))
+        await db.update(llmKeys).set({ provider: "bedrock", encryptedKey, keyHint, model, apiFormat, awsRegion: region, awsAccessKeyId: accessKeyId, encryptedAwsSecretKey: null, updatedAt: now }).where(eq(llmKeys.userId, userId))
       } else {
-        await db.insert(llmKeys).values({ id: nanoid(), userId, provider: "bedrock", encryptedKey, keyHint, model, awsRegion: region, awsAccessKeyId: accessKeyId, createdAt: now, updatedAt: now })
+        await db.insert(llmKeys).values({ id: nanoid(), userId, provider: "bedrock", encryptedKey, keyHint, model, apiFormat, awsRegion: region, awsAccessKeyId: accessKeyId, createdAt: now, updatedAt: now })
       }
     }
 
@@ -73,6 +76,7 @@ export async function getLlmKeyInfo() {
     provider: llmKeys.provider,
     keyHint: llmKeys.keyHint,
     model: llmKeys.model,
+    apiFormat: llmKeys.apiFormat,
     awsRegion: llmKeys.awsRegion,
     awsAccessKeyId: llmKeys.awsAccessKeyId,
     updatedAt: llmKeys.updatedAt,
@@ -110,6 +114,7 @@ export async function testLlmConnection(): Promise<{ success: boolean; message: 
         provider: keyRecord.provider as any,
         encryptedKey: keyRecord.encryptedKey,
         model: keyRecord.model ?? undefined,
+        apiFormat: keyRecord.apiFormat as any,
         awsRegion: keyRecord.awsRegion ?? undefined,
         awsAccessKeyId: keyRecord.awsAccessKeyId ?? undefined,
       },
