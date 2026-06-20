@@ -36,6 +36,7 @@ export default async function SettingsPage() {
                   provider: existing.provider,
                   keyHint: existing.keyHint,
                   model: existing.model,
+                  apiFormat: existing.apiFormat,
                   awsRegion: existing.awsRegion,
                   awsAccessKeyId: existing.awsAccessKeyId,
                 }

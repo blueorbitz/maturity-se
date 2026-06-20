@@ -108,13 +108,10 @@ async function testBedrockConnection() {
       body: Buffer.from(body),
     })
     
-    console.log("  Sending test request to Bedrock (minimax.minimax-m2.5)...")
     const response = await client.send(command)
     const result = JSON.parse(Buffer.from(response.body).toString())
-    
-    console.log("  Raw response structure:", JSON.stringify(result, null, 2).substring(0, 200) + "...")
-    
     const text = result.choices?.[0]?.message?.content ?? ""
+    
     if (text) {
       console.log("✓ Successfully got response from Bedrock")
       console.log("  Response:", text.substring(0, 100))
