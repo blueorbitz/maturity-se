@@ -76,21 +76,13 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
   // Determine request format based on model provider
   let requestBody: string
   if (modelId.includes("minimax")) {
-    // Minimax models use a different API format
+    // Minimax uses OpenAI format (no model field in body, no anthropic_version)
     requestBody = JSON.stringify({
-      model: modelId,
       messages: [{ role: "user", content: prompt }],
       max_tokens: 4096,
-    })
-  } else if (modelId.includes("anthropic") || modelId.includes("claude")) {
-    // Anthropic/Claude models use the Anthropic format
-    requestBody = JSON.stringify({
-      anthropic_version: "bedrock-2023-05-31",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
     })
   } else {
-    // Default to Anthropic format for unknown models
+    // Anthropic/Claude models use the Anthropic format
     requestBody = JSON.stringify({
       anthropic_version: "bedrock-2023-05-31",
       max_tokens: 4096,
@@ -117,14 +109,11 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
     // Extract text based on model format
     let text = ""
     if (modelId.includes("minimax")) {
-      // Minimax returns { "reply": "..." } or similar format
-      text = result.reply ?? result.text ?? result.output ?? ""
+      // Minimax returns OpenAI format: { "choices": [{ "message": { "content": "..." } }] }
+      text = result.choices?.[0]?.message?.content ?? ""
     } else {
       // Anthropic/Claude returns { "content": [{ "type": "text", "text": "..." }] }
-      if (result.content && Array.isArray(result.content) && result.content.length > 0) {
-        const firstContent = result.content[0]
-        text = firstContent.text ?? ""
-      }
+      text = result.content?.[0]?.text ?? ""
     }
     
     if (!text) {
