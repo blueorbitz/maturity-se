@@ -61,7 +61,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-sm font-semibold">Recent Templates</CardTitle>
-            <Button variant="ghost" size="sm" asChild className="text-xs h-7">
+            <Button variant="ghost" size="sm" asChild className="text-xs h-7 ml-auto">
               <Link href="/templates">View all <ArrowRight className="ml-1 h-3 w-3" /></Link>
             </Button>
           </CardHeader>
@@ -99,7 +99,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-sm font-semibold">Recent Assessments</CardTitle>
-            <Button variant="ghost" size="sm" asChild className="text-xs h-7">
+            <Button variant="ghost" size="sm" asChild className="text-xs h-7 ml-auto">
               <Link href="/assessments">View all <ArrowRight className="ml-1 h-3 w-3" /></Link>
             </Button>
           </CardHeader>
