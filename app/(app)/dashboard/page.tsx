@@ -6,7 +6,9 @@ import { StatCard } from "@/components/stat-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { FileText, ClipboardList, Globe, AlertTriangle, Plus, ArrowRight } from "lucide-react"
+import { FileText, ClipboardList, Globe, AlertTriangle, ArrowRight } from "lucide-react"
+import { IconButton } from "@/components/ui/icon-button"
+import { Plus } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 
@@ -28,12 +30,11 @@ export default async function DashboardPage() {
         title="Dashboard"
         description="Overview of your maturity assessments and templates"
         actions={
-          <Button asChild size="sm">
-            <Link href="/templates/new">
-              <Plus className="h-4 w-4 mr-1.5" />
+          <IconButton size="sm" icon={<Plus className="h-4 w-4" />}>
+            <Link href="/templates/new" className="gap-1.5">
               New Template
             </Link>
-          </Button>
+          </IconButton>
         }
       />
 
@@ -61,17 +62,25 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-sm font-semibold">Recent Templates</CardTitle>
-            <Button variant="ghost" size="sm" asChild className="text-xs h-7 ml-auto">
-              <Link href="/templates">View all <ArrowRight className="ml-1 h-3 w-3" /></Link>
-            </Button>
+            <IconButton size="sm" variant="ghost" icon={<ArrowRight className="ml-1 h-3 w-3" />}>
+              <Link href="/templates" className="gap-1.5">
+                View all
+              </Link>
+            </IconButton>
           </CardHeader>
           <CardContent className="pt-0">
             {recentTemplates.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-sm text-muted-foreground mb-3">No templates yet</p>
-                <Button asChild size="sm" variant="outline">
-                  <Link href="/templates/new"><Plus className="h-3.5 w-3.5 mr-1.5" />Create one</Link>
-                </Button>
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  icon={<Plus className="h-3.5 w-3.5 mr-1.5" />}
+                >
+                  <Link href="/templates/new" className="gap-1.5">
+                    Create one
+                  </Link>
+                </IconButton>
               </div>
             ) : (
               <div className="space-y-2">
@@ -99,17 +108,25 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-sm font-semibold">Recent Assessments</CardTitle>
-            <Button variant="ghost" size="sm" asChild className="text-xs h-7 ml-auto">
-              <Link href="/assessments">View all <ArrowRight className="ml-1 h-3 w-3" /></Link>
-            </Button>
+            <IconButton size="sm" variant="ghost" icon={<ArrowRight className="ml-1 h-3 w-3" />}>
+              <Link href="/assessments" className="gap-1.5">
+                View all
+              </Link>
+            </IconButton>
           </CardHeader>
           <CardContent className="pt-0">
             {recentAssessments.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-sm text-muted-foreground mb-3">No assessments yet</p>
-                <Button asChild size="sm" variant="outline">
-                  <Link href="/assessments/new"><Plus className="h-3.5 w-3.5 mr-1.5" />Create one</Link>
-                </Button>
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  icon={<Plus className="h-3.5 w-3.5 mr-1.5" />}
+                >
+                  <Link href="/assessments/new" className="gap-1.5">
+                    Create one
+                  </Link>
+                </IconButton>
               </div>
             ) : (
               <div className="space-y-2">

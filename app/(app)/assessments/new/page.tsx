@@ -2,6 +2,7 @@ import { getMyTemplates } from "@/app/actions/templates"
 import { NewAssessmentForm } from "@/components/new-assessment-form"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
+import { IconButton } from "@/components/ui/icon-button"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 
@@ -16,11 +17,17 @@ export default async function NewAssessmentPage({
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <div className="mb-4">
-        <Button variant="ghost" size="sm" asChild className="text-muted-foreground -ml-1">
-          <Link href="/assessments">
-            <ChevronLeft className="h-4 w-4 mr-1" /> Assessments
+        <IconButton
+          variant="ghost"
+          size="sm"
+          asChild
+          className="text-muted-foreground -ml-1"
+        >
+          <Link href="/assessments" className="gap-1.5">
+            <ChevronLeft className="h-4 w-4" />
+            Assessments
           </Link>
-        </Button>
+        </IconButton>
       </div>
       <PageHeader
         title="New Assessment"

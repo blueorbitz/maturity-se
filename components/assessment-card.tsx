@@ -11,6 +11,7 @@ import { deleteAssessment, updateAssessmentStatus } from "@/app/actions/assessme
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import type { AssessmentStatus } from "@/lib/db/schema"
+import { IconButton } from "@/components/ui/icon-button"
 
 type Assessment = {
   id: string
@@ -71,11 +72,11 @@ export function AssessmentCard({ assessment }: { assessment: Assessment }) {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
-            <Link href={`/assessments/${assessment.id}/report`}>
-              <BarChart2 className="h-3.5 w-3.5 mr-1.5" /> Report
+          <IconButton size="sm" variant="ghost" icon={<BarChart2 className="h-3.5 w-3.5 mr-1.5" />}>
+            <Link href={`/assessments/${assessment.id}/report`} className="gap-1.5">
+              Report
             </Link>
-          </Button>
+          </IconButton>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { InviteLinkBox } from "@/components/invite-link-box"
 import { AssessmentStatusControl } from "@/components/assessment-status-control"
-import { ChevronLeft, BarChart2, User } from "lucide-react"
+import { User } from "lucide-react"
+import { IconButton } from "@/components/ui/icon-button"
+import { ChevronLeft, BarChart2 } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow, format } from "date-fns"
 
@@ -30,22 +32,27 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-4">
-        <Button variant="ghost" size="sm" asChild className="text-muted-foreground -ml-1">
-          <Link href="/assessments">
-            <ChevronLeft className="h-4 w-4 mr-1" /> Assessments
+        <IconButton
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground -ml-1"
+          icon={<ChevronLeft className="h-4 w-4" />}
+        >
+          <Link href="/assessments" className="gap-1.5">
+            Assessments
           </Link>
-        </Button>
+        </IconButton>
       </div>
 
       <PageHeader
         title={assessment.title}
         description={assessment.teamName ? `Team: ${assessment.teamName}` : undefined}
         actions={
-          <Button asChild size="sm" variant="outline">
-            <Link href={`/assessments/${id}/report`}>
-              <BarChart2 className="h-4 w-4 mr-1.5" /> View Report
+          <IconButton size="sm" variant="outline" icon={<BarChart2 className="h-4 w-4" />}>
+            <Link href={`/assessments/${id}/report`} className="gap-1.5">
+              View Report
             </Link>
-          </Button>
+          </IconButton>
         }
       />
 

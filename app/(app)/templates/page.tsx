@@ -2,6 +2,7 @@ import { getMyTemplates } from "@/app/actions/templates"
 import { PageHeader } from "@/components/page-header"
 import { TemplateCard } from "@/components/template-card"
 import { Button } from "@/components/ui/button"
+import { IconButton } from "@/components/ui/icon-button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 
@@ -14,12 +15,11 @@ export default async function TemplatesPage() {
         title="My Templates"
         description="Manage your maturity assessment questionnaire templates"
         actions={
-          <Button asChild size="sm">
-            <Link href="/templates/new">
-              <Plus className="h-4 w-4 mr-1.5" />
+          <IconButton size="sm" icon={<Plus className="h-4 w-4" />}>
+            <Link href="/templates/new" className="gap-1.5">
               New Template
             </Link>
-          </Button>
+          </IconButton>
         }
       />
 
