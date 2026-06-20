@@ -8,6 +8,7 @@ import type { LlmProvider } from "./db/schema"
 export type LlmKeyRecord = {
   provider: LlmProvider
   encryptedKey: string
+  model?: string | null
   awsRegion?: string | null
   awsAccessKeyId?: string | null
   encryptedAwsSecretKey?: string | null
@@ -22,7 +23,8 @@ export async function callLlm(
   prompt: string
 ): Promise<string> {
   if (keyRecord.provider === "openai") {
-    return callOpenAi(keyRecord.encryptedKey, prompt)
+    const model = keyRecord.model?.trim() || "gpt-4o-mini"
+    return callOpenAi(keyRecord.encryptedKey, prompt, model)
   }
   if (keyRecord.provider === "bedrock") {
     return callBedrock(keyRecord, prompt)
@@ -30,7 +32,7 @@ export async function callLlm(
   throw new Error(`Unsupported provider: ${keyRecord.provider}`)
 }
 
-async function callOpenAi(encryptedKey: string, prompt: string): Promise<string> {
+async function callOpenAi(encryptedKey: string, prompt: string, model: string): Promise<string> {
   const apiKey = await decrypt(encryptedKey)
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -40,7 +42,7 @@ async function callOpenAi(encryptedKey: string, prompt: string): Promise<string>
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
       max_tokens: 4096,
@@ -75,8 +77,9 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
     messages: [{ role: "user", content: prompt }],
   })
 
+  const modelId = keyRecord.model?.trim() || "anthropic.claude-3-5-sonnet-20241022-v2:0"
   const command = new InvokeModelCommand({
-    modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    modelId,
     contentType: "application/json",
     accept: "application/json",
     body: Buffer.from(body),

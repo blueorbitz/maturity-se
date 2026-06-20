@@ -27,12 +27,13 @@ const TOPICS = [
   "Custom",
 ]
 
-const AUDIENCES = [
+const AUDIENCE_PRESETS = [
   "Engineering Team",
   "Engineering Managers",
   "Platform Team",
   "Leadership / Directors",
   "Full Engineering Organisation",
+  "Custom",
 ]
 
 interface DraftTemplate {
@@ -58,9 +59,11 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
   const [customTopic, setCustomTopic] = useState("")
   const [context, setContext] = useState("")
   const [targetAudience, setTargetAudience] = useState("")
-  const [scaleLength, setScaleLength] = useState(5)
+  const [customAudience, setCustomAudience] = useState("")
 
+  const SCALE_LENGTH = 5
   const effectiveTopic = topic === "Custom" ? customTopic : topic
+  const effectiveAudience = targetAudience === "Custom" ? customAudience : targetAudience
 
   async function handleGenerate() {
     setError(null)
@@ -70,8 +73,8 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
         title,
         topic: effectiveTopic,
         context: context || undefined,
-        targetAudience,
-        scaleLength,
+        targetAudience: effectiveAudience,
+        scaleLength: SCALE_LENGTH,
       })
       setDraft({ ...result, generatedByAi: true })
     } catch (err: unknown) {
@@ -82,7 +85,7 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
   }
 
   function handleCreateManually() {
-    const defaultScaleLevels: ScaleLevel[] = Array.from({ length: scaleLength }, (_, i) => ({
+    const defaultScaleLevels: ScaleLevel[] = Array.from({ length: SCALE_LENGTH }, (_, i) => ({
       level: i + 1,
       label: ["Initial", "Developing", "Defined", "Managed", "Optimizing"][i] ?? `Level ${i + 1}`,
       description: `Level ${i + 1} maturity description`,
@@ -91,8 +94,8 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
       title,
       topic: effectiveTopic,
       context: context || undefined,
-      targetAudience,
-      scaleLength,
+      targetAudience: effectiveAudience,
+      scaleLength: SCALE_LENGTH,
       scaleLevels: defaultScaleLevels,
       domains: [
         {
@@ -130,7 +133,7 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
     }
   }
 
-  const canProceed = title.trim() && effectiveTopic.trim() && targetAudience.trim()
+  const canProceed = title.trim() && effectiveTopic.trim() && effectiveAudience.trim()
 
   if (draft) {
     return (
@@ -188,25 +191,28 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
               <SelectValue placeholder="Select target audience" />
             </SelectTrigger>
             <SelectContent>
-              {AUDIENCES.map((a) => (
+              {AUDIENCE_PRESETS.map((a) => (
                 <SelectItem key={a} value={a}>{a}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {targetAudience === "Custom" && (
+            <Input
+              value={customAudience}
+              onChange={(e) => setCustomAudience(e.target.value)}
+              placeholder="e.g. Data Engineering Team, Security Champions"
+              maxLength={200}
+              className="mt-2"
+            />
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="scaleLength">Maturity scale levels</Label>
-          <Select value={String(scaleLength)} onValueChange={(v) => setScaleLength(Number(v))}>
-            <SelectTrigger id="scaleLength" className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                <SelectItem key={n} value={String(n)}>{n} levels</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Maturity scale levels</Label>
+          <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-input bg-muted/40 text-sm text-muted-foreground w-32 select-none">
+            5 levels
+          </div>
+          <p className="text-xs text-muted-foreground">Fixed at 5 tiers: Initial → Developing → Defined → Managed → Optimizing.</p>
         </div>
 
         <div className="space-y-2">

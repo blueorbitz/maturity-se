@@ -5,27 +5,59 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { saveLlmKey, deleteLlmKey } from '@/app/actions/llm-keys'
+
+const OPENAI_MODELS = [
+  { id: 'gpt-4o',       label: 'GPT-4o' },
+  { id: 'gpt-4o-mini',  label: 'GPT-4o Mini' },
+  { id: 'gpt-4-turbo',  label: 'GPT-4 Turbo' },
+  { id: 'gpt-3.5-turbo',label: 'GPT-3.5 Turbo' },
+]
+
+const BEDROCK_MODELS = [
+  { id: 'anthropic.claude-3-5-sonnet-20241022-v2:0', label: 'Claude 3.5 Sonnet v2' },
+  { id: 'anthropic.claude-3-5-haiku-20241022-v1:0',  label: 'Claude 3.5 Haiku' },
+  { id: 'anthropic.claude-3-sonnet-20240229-v1:0',   label: 'Claude 3 Sonnet' },
+  { id: 'anthropic.claude-3-haiku-20240307-v1:0',    label: 'Claude 3 Haiku' },
+  { id: 'amazon.nova-pro-v1:0',                      label: 'Amazon Nova Pro' },
+  { id: 'amazon.nova-lite-v1:0',                     label: 'Amazon Nova Lite' },
+]
+
+const AWS_REGIONS = [
+  'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
+  'eu-west-1', 'eu-west-2', 'eu-central-1',
+  'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1',
+]
 
 interface LlmKeyFormProps {
   existing: {
     provider: string
     keyHint: string | null
+    model: string | null
     awsRegion: string | null
     awsAccessKeyId: string | null
   } | null
 }
 
 export function LlmKeyForm({ existing }: LlmKeyFormProps) {
+  // Default to bedrock as requested
   const [provider, setProvider] = useState<'openai' | 'bedrock'>(
-    (existing?.provider as 'openai' | 'bedrock') ?? 'openai'
+    (existing?.provider as 'openai' | 'bedrock') ?? 'bedrock'
   )
   const [openaiKey, setOpenaiKey] = useState('')
+  const [openaiModel, setOpenaiModel] = useState(
+    existing?.provider === 'openai' ? (existing.model ?? 'gpt-4o-mini') : 'gpt-4o-mini'
+  )
   const [awsAccessKeyId, setAwsAccessKeyId] = useState(existing?.awsAccessKeyId ?? '')
   const [awsSecretKey, setAwsSecretKey] = useState('')
   const [awsRegion, setAwsRegion] = useState(existing?.awsRegion ?? 'us-east-1')
+  const [bedrockModel, setBedrockModel] = useState(
+    existing?.provider === 'bedrock'
+      ? (existing.model ?? 'anthropic.claude-3-5-sonnet-20241022-v2:0')
+      : 'anthropic.claude-3-5-sonnet-20241022-v2:0'
+  )
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -35,6 +67,7 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
     setMessage(null)
     const result = await saveLlmKey({
       provider,
+      model: provider === 'openai' ? openaiModel : bedrockModel,
       openaiKey: provider === 'openai' ? openaiKey : undefined,
       awsAccessKeyId: provider === 'bedrock' ? awsAccessKeyId : undefined,
       awsSecretKey: provider === 'bedrock' ? awsSecretKey : undefined,
@@ -65,17 +98,24 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
         <Card className="border-primary/20 bg-accent/20">
           <CardContent className="pt-4 pb-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-foreground">
                   {existing.provider === 'openai' ? 'OpenAI' : 'AWS Bedrock'} configured
                 </p>
-                {existing.keyHint && (
-                  <p className="text-xs text-muted-foreground font-mono">{existing.keyHint}</p>
-                )}
+                <p className="text-xs text-muted-foreground font-mono">
+                  {existing.keyHint && <span>{existing.keyHint}</span>}
+                  {existing.model && <span className="ml-2 text-primary/70">{existing.model}</span>}
+                </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleting} className="text-destructive hover:text-destructive">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-destructive hover:text-destructive shrink-0"
+            >
               {deleting ? 'Removing...' : 'Remove key'}
             </Button>
           </CardContent>
@@ -86,34 +126,33 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
         <CardHeader>
           <CardTitle className="text-base">LLM Provider — BYOK</CardTitle>
           <CardDescription>
-            Your API keys are encrypted with AES-256-GCM before storage. They are only used for template generation and are never exposed in responses.
+            Your API keys are encrypted with AES-256-GCM before storage. They are only used for template generation and never exposed in responses.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={provider} onValueChange={(v) => setProvider(v as 'openai' | 'bedrock')}>
             <TabsList className="mb-6">
-              <TabsTrigger value="openai">OpenAI</TabsTrigger>
               <TabsTrigger value="bedrock">AWS Bedrock</TabsTrigger>
+              <TabsTrigger value="openai">OpenAI</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="openai" className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="openai-key">API Key</Label>
-                <Input
-                  id="openai-key"
-                  type="password"
-                  value={openaiKey}
-                  onChange={(e) => setOpenaiKey(e.target.value)}
-                  placeholder={existing?.provider === 'openai' ? '••••••••••••• (update to change)' : 'sk-...'}
-                  autoComplete="off"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Used model: <span className="font-mono">gpt-4o-mini</span>. Requires an active OpenAI API key with sufficient credits.
-                </p>
-              </div>
-            </TabsContent>
-
+            {/* ── AWS Bedrock ── */}
             <TabsContent value="bedrock" className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="bedrock-model">Model</Label>
+                <Select value={bedrockModel} onValueChange={setBedrockModel}>
+                  <SelectTrigger id="bedrock-model">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BEDROCK_MODELS.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground font-mono">{bedrockModel}</p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="aws-access-key">AWS Access Key ID</Label>
@@ -127,14 +166,19 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="aws-region">Region</Label>
-                  <Input
-                    id="aws-region"
-                    value={awsRegion}
-                    onChange={(e) => setAwsRegion(e.target.value)}
-                    placeholder="us-east-1"
-                  />
+                  <Select value={awsRegion} onValueChange={setAwsRegion}>
+                    <SelectTrigger id="aws-region">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AWS_REGIONS.map((r) => (
+                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="aws-secret">AWS Secret Access Key</Label>
                 <Input
@@ -146,7 +190,39 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
                   autoComplete="off"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Used model: <span className="font-mono">anthropic.claude-3-haiku-20240307-v1:0</span>. Ensure Bedrock access is enabled in your region.
+                  Ensure Bedrock model access is enabled in your AWS console for the selected region.
+                </p>
+              </div>
+            </TabsContent>
+
+            {/* ── OpenAI ── */}
+            <TabsContent value="openai" className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="openai-model">Model</Label>
+                <Select value={openaiModel} onValueChange={setOpenaiModel}>
+                  <SelectTrigger id="openai-model">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {OPENAI_MODELS.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="openai-key">API Key</Label>
+                <Input
+                  id="openai-key"
+                  type="password"
+                  value={openaiKey}
+                  onChange={(e) => setOpenaiKey(e.target.value)}
+                  placeholder={existing?.provider === 'openai' ? '••••••••••••• (update to change)' : 'sk-...'}
+                  autoComplete="off"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Requires an active OpenAI API key with sufficient credits.
                 </p>
               </div>
             </TabsContent>

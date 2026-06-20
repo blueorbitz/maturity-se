@@ -132,6 +132,7 @@ export const llmKeys = pgTable("llm_keys", {
   provider: text("provider").notNull().$type<LlmProvider>(),
   encryptedKey: text("encryptedKey").notNull(),
   keyHint: text("keyHint"),
+  model: text("model"),
   awsRegion: text("awsRegion"),
   awsAccessKeyId: text("awsAccessKeyId"),
   encryptedAwsSecretKey: text("encryptedAwsSecretKey"),
