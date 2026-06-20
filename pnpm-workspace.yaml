@@ -1,0 +1,14 @@
+allowBuilds:
+  sharp: false
+minimumReleaseAgeExclude:
+  - '@aws-sdk/client-bedrock-runtime@3.1073.0'
+  - '@aws-sdk/token-providers@3.1073.0'
+  - '@better-auth/core@1.6.20'
+  - '@better-auth/drizzle-adapter@1.6.20'
+  - '@better-auth/kysely-adapter@1.6.20'
+  - '@better-auth/memory-adapter@1.6.20'
+  - '@better-auth/mongo-adapter@1.6.20'
+  - '@better-auth/prisma-adapter@1.6.20'
+  - '@better-auth/telemetry@1.6.20'
+  - better-auth@1.6.20
+  - nanoid@5.1.15
