@@ -102,13 +102,25 @@ Rules:
 
   const raw = await callLlm(keyRecord, prompt)
 
-  // Extract JSON from response (strip any accidental markdown fences)
-  const jsonMatch = raw.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error("LLM returned an unexpected response format. Please try again.")
+  // Extract JSON from response (strip any accidental markdown fences or prose)
+  // Match the outermost JSON object: find first { and last }
+  const firstBrace = raw.indexOf('{')
+  const lastBrace = raw.lastIndexOf('}')
+  
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+    throw new Error("LLM returned an unexpected response format. Please try again.")
+  }
+  
+  const jsonStr = raw.substring(firstBrace, lastBrace + 1)
 
-  const parsed2 = JSON.parse(jsonMatch[0]) as {
-    scaleLevels: ScaleLevel[]
-    domains: Domain[]
+  let parsed2: { scaleLevels: ScaleLevel[]; domains: Domain[] }
+  try {
+    parsed2 = JSON.parse(jsonStr) as {
+      scaleLevels: ScaleLevel[]
+      domains: Domain[]
+    }
+  } catch {
+    throw new Error("LLM returned invalid JSON. Please try again.")
   }
 
   if (!Array.isArray(parsed2.scaleLevels) || !Array.isArray(parsed2.domains)) {

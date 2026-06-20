@@ -87,5 +87,18 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
 
   const response = await client.send(command)
   const result = JSON.parse(Buffer.from(response.body).toString())
-  return result.content?.[0]?.text ?? ""
+  
+  // Extract text from Claude response structure
+  // Claude returns { "content": [{ "type": "text", "text": "..." }] }
+  let text = ""
+  if (result.content && Array.isArray(result.content) && result.content.length > 0) {
+    const firstContent = result.content[0]
+    text = firstContent.text ?? ""
+  }
+  
+  if (!text) {
+    throw new Error("Bedrock returned an empty response. Check your AWS credentials and model ID.")
+  }
+  
+  return text
 }
