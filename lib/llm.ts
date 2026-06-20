@@ -63,8 +63,6 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
   const region = keyRecord.awsRegion ?? "us-east-1"
   const accessKeyId = keyRecord.awsAccessKeyId ?? ""
 
-  console.log("[v0] Bedrock call - Region:", region, "AccessKeyId hint:", accessKeyId.substring(0, 4) + "...")
-
   const client = new BedrockRuntimeClient({
     region,
     credentials: {
@@ -73,59 +71,79 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
     },
   })
 
-  const body = JSON.stringify({
-    anthropic_version: "bedrock-2023-05-31",
-    max_tokens: 4096,
-    messages: [{ role: "user", content: prompt }],
-  })
-
   const modelId = keyRecord.model?.trim() || "minimax.minimax-m2.5"
-  console.log("[v0] Bedrock modelId:", modelId)
+  
+  // Determine request format based on model provider
+  let requestBody: string
+  if (modelId.includes("minimax")) {
+    // Minimax models use a different API format
+    requestBody = JSON.stringify({
+      model: modelId,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 4096,
+    })
+  } else if (modelId.includes("anthropic") || modelId.includes("claude")) {
+    // Anthropic/Claude models use the Anthropic format
+    requestBody = JSON.stringify({
+      anthropic_version: "bedrock-2023-05-31",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }],
+    })
+  } else {
+    // Default to Anthropic format for unknown models
+    requestBody = JSON.stringify({
+      anthropic_version: "bedrock-2023-05-31",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }],
+    })
+  }
 
   const command = new InvokeModelCommand({
     modelId,
     contentType: "application/json",
     accept: "application/json",
-    body: Buffer.from(body),
+    body: Buffer.from(requestBody),
   })
 
   try {
     const response = await client.send(command)
-    console.log("[v0] Bedrock response status:", response.$metadata?.httpStatusCode)
-    
     const result = JSON.parse(Buffer.from(response.body).toString())
-    console.log("[v0] Bedrock parsed response:", JSON.stringify(result).substring(0, 300))
     
     // Check for Bedrock error in response
     if (result.error) {
-      console.error("[v0] Bedrock error response:", result.error)
       throw new Error(`Bedrock API error: ${result.error}`)
     }
     
-    // Extract text from Claude response structure
-    // Claude returns { "content": [{ "type": "text", "text": "..." }] }
+    // Extract text based on model format
     let text = ""
-    if (result.content && Array.isArray(result.content) && result.content.length > 0) {
-      const firstContent = result.content[0]
-      text = firstContent.text ?? ""
+    if (modelId.includes("minimax")) {
+      // Minimax returns { "reply": "..." } or similar format
+      text = result.reply ?? result.text ?? result.output ?? ""
+    } else {
+      // Anthropic/Claude returns { "content": [{ "type": "text", "text": "..." }] }
+      if (result.content && Array.isArray(result.content) && result.content.length > 0) {
+        const firstContent = result.content[0]
+        text = firstContent.text ?? ""
+      }
     }
     
     if (!text) {
-      console.error("[v0] Bedrock returned empty text. Full response:", JSON.stringify(result))
-      throw new Error("Bedrock returned an empty response. Verify: 1) AWS Access Key ID and Secret Key are correct, 2) Bedrock is enabled for the model in your region, 3) The model ID is valid.")
+      throw new Error(`Bedrock (${modelId}) returned an empty response. Check: 1) AWS credentials validity, 2) Model is enabled in your region, 3) Model ID format is correct for the provider.`)
     }
     
     return text
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
-    console.error("[v0] Bedrock call failed:", errorMsg)
     
-    // Re-throw with more context about what might be wrong
-    if (errorMsg.includes("InvalidSignatureException") || errorMsg.includes("UnrecognizedClientException")) {
+    // Provide specific guidance based on error type
+    if (errorMsg.includes("InvalidSignatureException") || errorMsg.includes("UnrecognizedClientException") || errorMsg.includes("signature")) {
       throw new Error("AWS credentials are invalid or expired. Check your Access Key ID and Secret Access Key in Settings.")
     }
-    if (errorMsg.includes("AccessDenied") || errorMsg.includes("ValidationException")) {
-      throw new Error("Cannot access this Bedrock model. Check that Bedrock is enabled for this model in your AWS region, and your IAM user has permission to invoke models.")
+    if (errorMsg.includes("AccessDenied") || errorMsg.includes("not authorized")) {
+      throw new Error(`Not authorized to use model ${modelId}. Check: 1) Bedrock is enabled for this model in your AWS region, 2) Your IAM user has bedrock:InvokeModel permission.`)
+    }
+    if (errorMsg.includes("ResourceNotFoundException") || errorMsg.includes("UnrecognizedModelException")) {
+      throw new Error(`Model ${modelId} not found or not available in region ${region}. Verify the model ID is correct for your region.`)
     }
     
     throw error
