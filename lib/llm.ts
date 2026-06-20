@@ -60,9 +60,21 @@ async function callOpenAi(encryptedKey: string, prompt: string, model: string): 
 }
 
 async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<string> {
-  const secretKey = await decrypt(keyRecord.encryptedKey)
   const region = keyRecord.awsRegion ?? "us-east-1"
   const accessKeyId = keyRecord.awsAccessKeyId ?? ""
+  
+  // For credentials from ENV, encryptedKey contains the plain secret key
+  // Try to decrypt, but if it's already plain (e.g., from ENV), use as-is
+  let secretKey = keyRecord.encryptedKey
+  try {
+    // Check if it looks like it might be encrypted (very long and base64-like)
+    if (keyRecord.encryptedKey.length > 100) {
+      secretKey = await decrypt(keyRecord.encryptedKey)
+    }
+  } catch (e) {
+    // Not encrypted, use as-is (likely from ENV)
+    console.log("[v0] Using plain secret key from credentials (not encrypted)")
+  }
 
   const client = new BedrockRuntimeClient({
     region,

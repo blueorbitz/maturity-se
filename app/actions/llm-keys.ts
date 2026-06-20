@@ -79,9 +79,33 @@ export async function getLlmKeyInfo() {
     apiFormat: llmKeys.apiFormat,
     awsRegion: llmKeys.awsRegion,
     awsAccessKeyId: llmKeys.awsAccessKeyId,
+    encryptedKey: llmKeys.encryptedKey,
     updatedAt: llmKeys.updatedAt,
   }).from(llmKeys).where(eq(llmKeys.userId, userId))
-  return key ?? null
+  
+  if (key) {
+    return key
+  }
+  
+  // If no key found, check for environment variables (fallback for testing/development)
+  const envAccessKey = process.env.AWS_ACCESS_KEY_ID
+  const envSecretKey = process.env.AWS_SECRET_ACCESS_KEY
+  
+  if (envAccessKey && envSecretKey) {
+    console.log("[v0] Using AWS credentials from environment variables")
+    return {
+      provider: "bedrock",
+      keyHint: `${envAccessKey.slice(0, 4)}...${envAccessKey.slice(-4)} (from ENV)`,
+      model: "minimax.minimax-m2.5",
+      apiFormat: "openai",
+      awsRegion: "us-east-1",
+      awsAccessKeyId: envAccessKey,
+      encryptedKey: envSecretKey, // Store plain secret; callBedrock will detect it
+      updatedAt: new Date(),
+    }
+  }
+  
+  return null
 }
 
 export async function deleteLlmKey(): Promise<{ success: boolean; error?: string }> {
