@@ -48,7 +48,8 @@ const mockMinimaxResponse = {
 function testParseJsonResponse() {
   console.log("Test 1: Parsing JSON response from Minimax...")
   // The actual response from Bedrock contains the JSON as a STRING in content field
-  const raw = mockMinimaxResponse.choices[0].message.content as string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const raw = (mockMinimaxResponse.choices[0].message.content as unknown) as string
   console.log("  Raw response sample:", raw.substring(0, 100) + "...")
   
   // This is what the template generation code does
@@ -154,7 +155,7 @@ async function testFullFlow() {
     console.log("  - Title: DevOps Maturity Assessment")
     console.log("  - Scale levels:", parsed.scaleLevels.length)
     console.log("  - Domains:", parsed.domains.length)
-    console.log("  - Total questions:", parsed.domains.reduce((sum: number, d: any) => sum + d.questions.length, 0))
+    console.log("  - Total questions:", parsed.domains.reduce((sum: number, d: { questions: { length: number } }) => sum + d.questions.length, 0))
   } catch (e) {
     throw new Error(`Flow failed: ${e}`)
   }

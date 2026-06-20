@@ -67,7 +67,7 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
   let secretKey: string
   try {
     secretKey = await decrypt(keyRecord.encryptedKey)
-  } catch (decryptError) {
+  } catch {
     // If decryption fails, it might be a plain text key (from ENV)
     console.log("[v0] Decryption failed, using key as-is (likely from ENV)")
     secretKey = keyRecord.encryptedKey
@@ -139,9 +139,8 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
     }
     
     return text
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : String(error)
-    const errorCode = (error as any)?.Code || (error as any)?.$metadata?.httpStatusCode
     
     // Provide specific guidance based on error type
     if (errorMsg.includes("InvalidSignatureException") || errorMsg.includes("signature")) {

@@ -1,4 +1,4 @@
-import { getPublicTemplates, cloneTemplate } from "@/app/actions/templates"
+import { getPublicTemplates } from "@/app/actions/templates"
 import { PageHeader } from "@/components/page-header"
 import { GalleryClient } from "@/components/gallery-client"
 

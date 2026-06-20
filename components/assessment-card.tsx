@@ -2,8 +2,6 @@
 
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Play, Square, Trash2, BarChart2, Link2 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
@@ -80,9 +78,7 @@ export function AssessmentCard({ assessment }: { assessment: Assessment }) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={loading}>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
+              <IconButton size="sm" variant="ghost" icon={<MoreHorizontal className="h-4 w-4" />} disabled={loading} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={copyInviteLink}>

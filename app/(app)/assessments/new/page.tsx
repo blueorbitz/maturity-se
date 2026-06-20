@@ -1,7 +1,6 @@
 import { getMyTemplates } from "@/app/actions/templates"
 import { NewAssessmentForm } from "@/components/new-assessment-form"
 import { PageHeader } from "@/components/page-header"
-import { Button } from "@/components/ui/button"
 import { IconButton } from "@/components/ui/icon-button"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"

@@ -47,6 +47,7 @@ function Button({
   asChild: _asChild,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
+  void _asChild; // intentionally unused
   return (
     <ButtonPrimitive
       data-slot="button"

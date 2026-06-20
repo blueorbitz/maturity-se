@@ -2,7 +2,7 @@
 
 import { getUserId } from "@/lib/auth-helpers"
 import { db } from "@/lib/db"
-import { llmKeys } from "@/lib/db/schema"
+import { llmKeys, type ApiFormat } from "@/lib/db/schema"
 import { encrypt } from "@/lib/crypto"
 import { eq } from "drizzle-orm"
 import { nanoid } from "nanoid"
@@ -135,10 +135,10 @@ export async function testLlmConnection(): Promise<{ success: boolean; message: 
     const testPrompt = "Reply with exactly: Connection successful"
     const response = await callLlm(
       {
-        provider: keyRecord.provider as any,
+        provider: keyRecord.provider as LLMProvider,
         encryptedKey: keyRecord.encryptedKey,
         model: keyRecord.model ?? undefined,
-        apiFormat: keyRecord.apiFormat as any,
+        apiFormat: keyRecord.apiFormat as ApiFormat,
         awsRegion: keyRecord.awsRegion ?? undefined,
         awsAccessKeyId: keyRecord.awsAccessKeyId ?? undefined,
       },
