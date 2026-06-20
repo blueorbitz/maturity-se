@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { saveLlmKey, deleteLlmKey } from '@/app/actions/llm-keys'
+import { saveLlmKey, deleteLlmKey, testLlmConnection } from '@/app/actions/llm-keys'
 
 const AWS_REGIONS = [
   'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
@@ -39,11 +39,12 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
   const [awsRegion, setAwsRegion] = useState(existing?.awsRegion ?? 'us-east-1')
   const [bedrockModel, setBedrockModel] = useState(
     existing?.provider === 'bedrock'
-      ? (existing.model ?? 'anthropic.claude-3-5-sonnet-20241022-v2:0')
-      : 'anthropic.claude-3-5-sonnet-20241022-v2:0'
+      ? (existing.model ?? 'minimax.minimax-m2.5')
+      : 'minimax.minimax-m2.5'
   )
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [testing, setTesting] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   async function handleSave() {
@@ -73,6 +74,17 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
     setDeleting(false)
     if (result.error) setMessage({ type: 'error', text: result.error })
     else setMessage({ type: 'success', text: 'API key removed.' })
+  }
+
+  async function handleTest() {
+    setTesting(true)
+    setMessage(null)
+    const result = await testLlmConnection()
+    setTesting(false)
+    setMessage({
+      type: result.success ? 'success' : 'error',
+      text: result.message,
+    })
   }
 
   return (
@@ -128,7 +140,7 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
                   id="bedrock-model"
                   value={bedrockModel}
                   onChange={(e) => setBedrockModel(e.target.value)}
-                  placeholder="e.g. anthropic.claude-3-5-sonnet-20241022-v2:0"
+                  placeholder="e.g. minimax.minimax-m2.5"
                   className="font-mono text-sm"
                   autoComplete="off"
                 />
@@ -219,7 +231,17 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
             </div>
           )}
 
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-between items-center mt-6">
+            {existing && (
+              <Button
+                variant="outline"
+                onClick={handleTest}
+                disabled={testing}
+                className="text-xs"
+              >
+                {testing ? 'Testing...' : 'Test Connection'}
+              </Button>
+            )}
             <Button onClick={handleSave} disabled={saving}>
               {saving ? 'Saving...' : existing ? 'Update key' : 'Save key'}
             </Button>

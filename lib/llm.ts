@@ -79,7 +79,7 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
     messages: [{ role: "user", content: prompt }],
   })
 
-  const modelId = keyRecord.model?.trim() || "anthropic.claude-3-5-sonnet-20241022-v2:0"
+  const modelId = keyRecord.model?.trim() || "minimax.minimax-m2.5"
   console.log("[v0] Bedrock modelId:", modelId)
 
   const command = new InvokeModelCommand({

@@ -90,3 +90,39 @@ export async function deleteLlmKey(): Promise<{ success: boolean; error?: string
     return { success: false, error: "Failed to remove key." }
   }
 }
+
+export async function testLlmConnection(): Promise<{ success: boolean; message: string }> {
+  try {
+    const userId = await getUserId()
+    const [keyRecord] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
+    
+    if (!keyRecord) {
+      return { success: false, message: "No LLM key configured. Save your credentials first." }
+    }
+
+    // Import here to avoid circular deps at module load
+    const { callLlm } = await import("@/lib/llm")
+    
+    // Simple test prompt
+    const testPrompt = "Reply with exactly: Connection successful"
+    const response = await callLlm(
+      {
+        provider: keyRecord.provider as any,
+        encryptedKey: keyRecord.encryptedKey,
+        model: keyRecord.model ?? undefined,
+        awsRegion: keyRecord.awsRegion ?? undefined,
+        awsAccessKeyId: keyRecord.awsAccessKeyId ?? undefined,
+      },
+      testPrompt
+    )
+    
+    if (!response || response.length === 0) {
+      return { success: false, message: "LLM returned an empty response. Check your credentials." }
+    }
+
+    return { success: true, message: `✓ Connection successful. Response: ${response.substring(0, 50)}...` }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    return { success: false, message: `Connection failed: ${errorMsg}` }
+  }
+}
