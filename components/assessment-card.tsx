@@ -72,7 +72,7 @@ export function AssessmentCard({ assessment }: { assessment: Assessment }) {
 
         <div className="flex items-center gap-2 shrink-0">
           <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
-            <Link href={`/reports/${assessment.id}`}>
+            <Link href={`/assessments/${assessment.id}/report`}>
               <BarChart2 className="h-3.5 w-3.5 mr-1.5" /> Report
             </Link>
           </Button>

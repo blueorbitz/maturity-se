@@ -9,84 +9,59 @@ import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
-const SaveKeySchema = z.discriminatedUnion("provider", [
-  z.object({
-    provider: z.literal("openai"),
-    apiKey: z.string().min(10).max(300),
-  }),
-  z.object({
-    provider: z.literal("bedrock"),
-    awsAccessKeyId: z.string().min(10).max(200),
-    awsSecretAccessKey: z.string().min(10).max(300),
-    awsRegion: z.string().min(1).max(50),
-  }),
-])
+const SaveKeySchema = z.object({
+  provider: z.enum(["openai", "bedrock"]),
+  openaiKey: z.string().max(300).optional(),
+  awsAccessKeyId: z.string().max(200).optional(),
+  awsSecretKey: z.string().max(300).optional(),
+  awsRegion: z.string().max(50).optional(),
+})
 
-export async function saveLlmKey(formData: unknown) {
-  const userId = await getUserId()
-  const parsed = SaveKeySchema.safeParse(formData)
-  if (!parsed.success) throw new Error("Invalid input: " + parsed.error.message)
+export async function saveLlmKey(
+  formData: unknown
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getUserId()
+    const parsed = SaveKeySchema.safeParse(formData)
+    if (!parsed.success) return { success: false, error: "Invalid input." }
 
-  const data = parsed.data
-  const now = new Date()
+    const data = parsed.data
+    const now = new Date()
 
-  if (data.provider === "openai") {
-    const encryptedKey = await encrypt(data.apiKey)
-    const keyHint = `sk-...${data.apiKey.slice(-4)}`
+    if (data.provider === "openai") {
+      const key = data.openaiKey?.trim()
+      if (!key || key.length < 10) return { success: false, error: "A valid OpenAI API key is required." }
+      const encryptedKey = await encrypt(key)
+      const keyHint = `sk-...${key.slice(-4)}`
 
-    const [existing] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
-    if (existing) {
-      await db.update(llmKeys).set({
-        provider: "openai",
-        encryptedKey,
-        keyHint,
-        awsRegion: null,
-        awsAccessKeyId: null,
-        encryptedAwsSecretKey: null,
-        updatedAt: now,
-      }).where(eq(llmKeys.userId, userId))
+      const [existing] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
+      if (existing) {
+        await db.update(llmKeys).set({ provider: "openai", encryptedKey, keyHint, awsRegion: null, awsAccessKeyId: null, encryptedAwsSecretKey: null, updatedAt: now }).where(eq(llmKeys.userId, userId))
+      } else {
+        await db.insert(llmKeys).values({ id: nanoid(), userId, provider: "openai", encryptedKey, keyHint, createdAt: now, updatedAt: now })
+      }
     } else {
-      await db.insert(llmKeys).values({
-        id: nanoid(),
-        userId,
-        provider: "openai",
-        encryptedKey,
-        keyHint,
-        createdAt: now,
-        updatedAt: now,
-      })
-    }
-  } else {
-    const encryptedKey = await encrypt(data.awsSecretAccessKey)
-    const keyHint = `${data.awsAccessKeyId.slice(0, 4)}...${data.awsAccessKeyId.slice(-4)}`
+      const secretKey = data.awsSecretKey?.trim()
+      const accessKeyId = data.awsAccessKeyId?.trim()
+      const region = data.awsRegion?.trim() ?? "us-east-1"
+      if (!secretKey || secretKey.length < 10) return { success: false, error: "AWS Secret Access Key is required." }
+      if (!accessKeyId || accessKeyId.length < 10) return { success: false, error: "AWS Access Key ID is required." }
+      const encryptedKey = await encrypt(secretKey)
+      const keyHint = `${accessKeyId.slice(0, 4)}...${accessKeyId.slice(-4)}`
 
-    const [existing] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
-    if (existing) {
-      await db.update(llmKeys).set({
-        provider: "bedrock",
-        encryptedKey,
-        keyHint,
-        awsRegion: data.awsRegion,
-        awsAccessKeyId: data.awsAccessKeyId,
-        encryptedAwsSecretKey: null,
-        updatedAt: now,
-      }).where(eq(llmKeys.userId, userId))
-    } else {
-      await db.insert(llmKeys).values({
-        id: nanoid(),
-        userId,
-        provider: "bedrock",
-        encryptedKey,
-        keyHint,
-        awsRegion: data.awsRegion,
-        awsAccessKeyId: data.awsAccessKeyId,
-        createdAt: now,
-        updatedAt: now,
-      })
+      const [existing] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
+      if (existing) {
+        await db.update(llmKeys).set({ provider: "bedrock", encryptedKey, keyHint, awsRegion: region, awsAccessKeyId: accessKeyId, encryptedAwsSecretKey: null, updatedAt: now }).where(eq(llmKeys.userId, userId))
+      } else {
+        await db.insert(llmKeys).values({ id: nanoid(), userId, provider: "bedrock", encryptedKey, keyHint, awsRegion: region, awsAccessKeyId: accessKeyId, createdAt: now, updatedAt: now })
+      }
     }
+
+    revalidatePath("/settings")
+    return { success: true }
+  } catch {
+    return { success: false, error: "Failed to save key. Please try again." }
   }
-
-  revalidatePath("/settings")
 }
 
 export async function getLlmKeyInfo() {
@@ -101,8 +76,13 @@ export async function getLlmKeyInfo() {
   return key ?? null
 }
 
-export async function deleteLlmKey() {
-  const userId = await getUserId()
-  await db.delete(llmKeys).where(eq(llmKeys.userId, userId))
-  revalidatePath("/settings")
+export async function deleteLlmKey(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getUserId()
+    await db.delete(llmKeys).where(eq(llmKeys.userId, userId))
+    revalidatePath("/settings")
+    return { success: true }
+  } catch {
+    return { success: false, error: "Failed to remove key." }
+  }
 }

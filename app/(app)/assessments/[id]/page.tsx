@@ -42,7 +42,7 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
         description={assessment.teamName ? `Team: ${assessment.teamName}` : undefined}
         actions={
           <Button asChild size="sm" variant="outline">
-            <Link href={`/reports/${id}`}>
+            <Link href={`/assessments/${id}/report`}>
               <BarChart2 className="h-4 w-4 mr-1.5" /> View Report
             </Link>
           </Button>

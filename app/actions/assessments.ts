@@ -119,24 +119,31 @@ export async function getAssessmentResponses(assessmentId: string) {
 }
 
 export async function submitResponse(data: {
-  token: string
+  assessmentId: string
   respondentName?: string
   respondentRole?: string
-  answers: Record<string, number | string>
-}) {
-  const assessment = await getAssessmentByToken(data.token)
-  if (!assessment) throw new Error("Invalid invite link")
-  if (assessment.status !== "active") throw new Error("This assessment is not accepting responses")
+  answers: Record<string, number>
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const [assessment] = await db
+      .select()
+      .from(assessments)
+      .where(eq(assessments.id, data.assessmentId))
+    if (!assessment) return { success: false, error: "Assessment not found." }
+    if (assessment.status !== "active") return { success: false, error: "This assessment is not currently accepting responses." }
 
-  const id = nanoid()
-  await db.insert(responses).values({
-    id,
-    assessmentId: assessment.id,
-    respondentName: data.respondentName,
-    respondentRole: data.respondentRole,
-    answers: data.answers,
-    submittedAt: new Date(),
-  })
+    const id = nanoid()
+    await db.insert(responses).values({
+      id,
+      assessmentId: data.assessmentId,
+      respondentName: data.respondentName,
+      respondentRole: data.respondentRole,
+      answers: data.answers,
+      submittedAt: new Date(),
+    })
 
-  return { success: true }
+    return { success: true }
+  } catch {
+    return { success: false, error: "Failed to submit response. Please try again." }
+  }
 }
