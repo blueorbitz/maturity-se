@@ -9,22 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { saveLlmKey, deleteLlmKey } from '@/app/actions/llm-keys'
 
-const OPENAI_MODELS = [
-  { id: 'gpt-4o',       label: 'GPT-4o' },
-  { id: 'gpt-4o-mini',  label: 'GPT-4o Mini' },
-  { id: 'gpt-4-turbo',  label: 'GPT-4 Turbo' },
-  { id: 'gpt-3.5-turbo',label: 'GPT-3.5 Turbo' },
-]
-
-const BEDROCK_MODELS = [
-  { id: 'anthropic.claude-3-5-sonnet-20241022-v2:0', label: 'Claude 3.5 Sonnet v2' },
-  { id: 'anthropic.claude-3-5-haiku-20241022-v1:0',  label: 'Claude 3.5 Haiku' },
-  { id: 'anthropic.claude-3-sonnet-20240229-v1:0',   label: 'Claude 3 Sonnet' },
-  { id: 'anthropic.claude-3-haiku-20240307-v1:0',    label: 'Claude 3 Haiku' },
-  { id: 'amazon.nova-pro-v1:0',                      label: 'Amazon Nova Pro' },
-  { id: 'amazon.nova-lite-v1:0',                     label: 'Amazon Nova Lite' },
-]
-
 const AWS_REGIONS = [
   'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
   'eu-west-1', 'eu-west-2', 'eu-central-1',
@@ -139,18 +123,18 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
             {/* ── AWS Bedrock ── */}
             <TabsContent value="bedrock" className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="bedrock-model">Model</Label>
-                <Select value={bedrockModel} onValueChange={setBedrockModel}>
-                  <SelectTrigger id="bedrock-model">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BEDROCK_MODELS.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground font-mono">{bedrockModel}</p>
+                <Label htmlFor="bedrock-model">Model ID</Label>
+                <Input
+                  id="bedrock-model"
+                  value={bedrockModel}
+                  onChange={(e) => setBedrockModel(e.target.value)}
+                  placeholder="e.g. anthropic.claude-3-5-sonnet-20241022-v2:0"
+                  className="font-mono text-sm"
+                  autoComplete="off"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter the full Bedrock model ID as it appears in the AWS console.
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -198,17 +182,18 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
             {/* ── OpenAI ── */}
             <TabsContent value="openai" className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="openai-model">Model</Label>
-                <Select value={openaiModel} onValueChange={setOpenaiModel}>
-                  <SelectTrigger id="openai-model">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OPENAI_MODELS.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="openai-model">Model ID</Label>
+                <Input
+                  id="openai-model"
+                  value={openaiModel}
+                  onChange={(e) => setOpenaiModel(e.target.value)}
+                  placeholder="e.g. gpt-4o-mini"
+                  className="font-mono text-sm"
+                  autoComplete="off"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter any OpenAI model ID, e.g. <span className="font-mono">gpt-4o</span>, <span className="font-mono">gpt-4o-mini</span>, <span className="font-mono">o1-mini</span>.
+                </p>
               </div>
 
               <div className="space-y-1.5">
