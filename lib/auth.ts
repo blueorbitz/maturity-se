@@ -29,11 +29,6 @@ const trustedOrigins = isProd
     ]
   : ['*']
 
-console.log('isProd', isProd);
-console.log('trustedOrigins', trustedOrigins);
-console.log('previewURL', previewURL);
-console.log('runtimeURL', runtimeURL);
-
 export const auth = betterAuth({
   database: pool,
   baseURL,
