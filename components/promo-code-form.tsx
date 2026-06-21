@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { redeemPromoCode } from '@/app/actions/promo-codes'
+import posthog from 'posthog-js'
 import { Ticket } from 'lucide-react'
 
 interface PromoCodeFormProps {
@@ -31,6 +32,7 @@ export function PromoCodeForm({ creditsRemaining, onRedeemed }: PromoCodeFormPro
     if (result.error) {
       setMessage({ type: 'error', text: result.error })
     } else if (result.success && result.remaining !== undefined) {
+      posthog.capture('promo_code_redeemed', { code })
       setMessage({
         type: 'success',
         text: `Redeemed! ${result.generationsGranted} generations granted. You have ${result.remaining} remaining.`,

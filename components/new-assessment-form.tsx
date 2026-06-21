@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createAssessment } from "@/app/actions/assessments"
+import posthog from "posthog-js"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -42,6 +43,7 @@ export function NewAssessmentForm({ templates, defaultTemplateId }: Props) {
         teamName: teamName || undefined,
         dueDate: dueDate || undefined,
       })
+      posthog.capture('assessment_created')
       router.push(`/assessments/${id}`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to create assessment")

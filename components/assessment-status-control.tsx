@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { updateAssessmentStatus, deleteAssessment } from "@/app/actions/assessments"
+import posthog from "posthog-js"
 import type { AssessmentStatus } from "@/lib/db/schema"
 import { PlayCircle, StopCircle, Trash2, AlertTriangle } from "lucide-react"
 
@@ -24,6 +25,7 @@ export function AssessmentStatusControl({
   async function handleStatus(status: AssessmentStatus) {
     setBusy(true)
     await updateAssessmentStatus(assessmentId, status)
+    posthog.capture('assessment_status_changed', { from: currentStatus, to: status })
     setBusy(false)
     router.refresh()
   }

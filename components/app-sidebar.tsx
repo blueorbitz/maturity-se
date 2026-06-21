@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { authClient } from "@/lib/auth-client"
+import posthog from "posthog-js"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
@@ -37,6 +38,7 @@ export function AppSidebar({ user }: { user: User }) {
 
   async function handleSignOut() {
     setSigningOut(true)
+    posthog.reset()
     await authClient.signOut()
     router.push("/sign-in")
     router.refresh()

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { saveLlmKey, deleteLlmKey, testLlmConnection } from '@/app/actions/llm-keys'
+import posthog from 'posthog-js'
 
 const AWS_REGIONS = [
   'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
@@ -68,6 +69,7 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
     setSaving(false)
     if (result.error) setMessage({ type: 'error', text: result.error })
     else {
+      posthog.capture(existing ? 'llm_provider_updated' : 'llm_provider_added', { provider })
       setMessage({ type: 'success', text: 'API key saved securely.' })
       setOpenaiKey('')
       setAwsSecretKey('')
