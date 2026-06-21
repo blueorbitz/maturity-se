@@ -52,12 +52,15 @@ export function AuthForm({ mode }: { mode: Mode }) {
   return (
     <Card className="w-full max-w-sm shadow-lg border-border">
       <CardHeader className="space-y-1">
-        <div className="flex items-center gap-2 mb-2">
+        <Link href="/" className="flex items-center gap-2 mb-2 w-fit">
           <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground text-xs font-bold">M</span>
+            <svg viewBox="0 0 24 24" fill="none" className="size-3.5 text-primary-foreground" stroke="currentColor" strokeWidth="2.5">
+              <path d="M9 12l2 2 4-4" />
+              <path d="M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
           </div>
           <span className="font-semibold text-sm text-muted-foreground">MaturitySE</span>
-        </div>
+        </Link>
         <CardTitle className="text-xl">
           {mode === "sign-in" ? "Welcome back" : "Create your account"}
         </CardTitle>
