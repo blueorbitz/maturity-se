@@ -10,8 +10,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import {
-  Loader2, Plus, Trash2, ChevronDown, ChevronUp, GripVertical, Save, ChevronLeft
+  Loader2, Trash2, ChevronDown, ChevronUp, GripVertical, Save
 } from "lucide-react"
+import { IconButton } from "@/components/ui/icon-button"
+import { Plus, ChevronLeft } from "lucide-react"
 import type { Domain, Question, ScaleLevel } from "@/lib/db/schema"
 import { nanoid } from "nanoid"
 
@@ -126,18 +128,28 @@ export function TemplateEditor({ initialData, onSave, onBack, saving, error }: T
       {/* Top actions */}
       <div className="flex items-center justify-between gap-4">
         {onBack && (
-          <Button variant="ghost" size="sm" onClick={onBack} className="text-muted-foreground -ml-1">
-            <ChevronLeft className="h-4 w-4 mr-1" /> Back
-          </Button>
+          <IconButton
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="text-muted-foreground -ml-1"
+            icon={<ChevronLeft className="h-4 w-4" />}
+          >
+            Back
+          </IconButton>
         )}
         <div className="ml-auto flex items-center gap-2">
           <span className="text-xs text-muted-foreground hidden sm:inline">
             {data.domains.length} domains · {totalQuestions} questions
           </span>
-          <Button onClick={() => onSave(data)} disabled={saving} size="sm">
-            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+          <IconButton
+            onClick={() => onSave(data)}
+            disabled={saving}
+            size="sm"
+            icon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          >
             Save Template
-          </Button>
+          </IconButton>
         </div>
       </div>
 
@@ -242,9 +254,9 @@ export function TemplateEditor({ initialData, onSave, onBack, saving, error }: T
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Domains</h2>
-          <Button variant="outline" size="sm" onClick={addDomain}>
-            <Plus className="h-4 w-4 mr-1.5" /> Add Domain
-          </Button>
+          <IconButton variant="outline" size="sm" onClick={addDomain} icon={<Plus className="h-4 w-4" />}>
+            Add Domain
+          </IconButton>
         </div>
 
         {data.domains.map((domain, di) => {
@@ -305,7 +317,7 @@ export function TemplateEditor({ initialData, onSave, onBack, saving, error }: T
                       />
                       <Select
                         value={q.type}
-                        onValueChange={(v) => updateQuestion(domain.id, q.id, "type", v)}
+                        onValueChange={(v) => updateQuestion(domain.id, q.id, "type", v ?? "scale")}
                       >
                         <SelectTrigger className="w-24 h-9 text-xs shrink-0">
                           <SelectValue />

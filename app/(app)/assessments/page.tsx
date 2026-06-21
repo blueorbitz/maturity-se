@@ -2,6 +2,7 @@ import { getMyAssessments } from "@/app/actions/assessments"
 import { PageHeader } from "@/components/page-header"
 import { AssessmentCard } from "@/components/assessment-card"
 import { Button } from "@/components/ui/button"
+import { IconButton } from "@/components/ui/icon-button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 
@@ -14,12 +15,11 @@ export default async function AssessmentsPage() {
         title="Assessments"
         description="Distribute maturity questionnaires to your teams and track responses"
         actions={
-          <Button asChild size="sm">
-            <Link href="/assessments/new">
-              <Plus className="h-4 w-4 mr-1.5" />
+          <IconButton size="sm" icon={<Plus className="h-4 w-4" />}>
+            <Link href="/assessments/new" className="gap-1.5">
               New Assessment
             </Link>
-          </Button>
+          </IconButton>
         }
       />
 

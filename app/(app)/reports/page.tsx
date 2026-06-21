@@ -1,8 +1,6 @@
 import { getMyAssessments } from "@/app/actions/assessments"
 import { PageHeader } from "@/components/page-header"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { BarChart2, ChevronRight, ClipboardList } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"

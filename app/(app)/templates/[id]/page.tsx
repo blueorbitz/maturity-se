@@ -1,11 +1,12 @@
 import { getTemplateById } from "@/app/actions/templates"
 import { notFound } from "next/navigation"
 import { PageHeader } from "@/components/page-header"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Pencil, ChevronLeft, ClipboardList, Globe, Lock } from "lucide-react"
+import { ChevronLeft, Globe, Lock } from "lucide-react"
+import { IconButton } from "@/components/ui/icon-button"
+import { Pencil, ClipboardList } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 
@@ -19,11 +20,16 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-4">
-        <Button variant="ghost" size="sm" asChild className="text-muted-foreground -ml-1">
-          <Link href="/templates">
-            <ChevronLeft className="h-4 w-4 mr-1" /> Templates
+        <IconButton
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground -ml-1"
+          icon={<ChevronLeft className="h-4 w-4" />}
+        >
+          <Link href="/templates" className="gap-1.5">
+            Templates
           </Link>
-        </Button>
+        </IconButton>
       </div>
 
       <PageHeader
@@ -31,18 +37,16 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
         description={`${template.topic} · ${template.targetAudience}`}
         actions={
           <div className="flex gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/assessments/new?templateId=${template.id}`}>
-                <ClipboardList className="h-4 w-4 mr-1.5" />
+            <IconButton variant="outline" size="sm" icon={<ClipboardList className="h-4 w-4" />}>
+              <Link href={`/assessments/new?templateId=${template.id}`} className="gap-1.5">
                 Send Assessment
               </Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link href={`/templates/${template.id}/edit`}>
-                <Pencil className="h-4 w-4 mr-1.5" />
+            </IconButton>
+            <IconButton size="sm" icon={<Pencil className="h-4 w-4" />}>
+              <Link href={`/templates/${template.id}/edit`} className="gap-1.5">
                 Edit
               </Link>
-            </Button>
+            </IconButton>
           </div>
         }
       />

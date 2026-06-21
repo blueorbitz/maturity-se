@@ -2,8 +2,6 @@
 
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Play, Square, Trash2, BarChart2, Link2 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
@@ -11,6 +9,7 @@ import { deleteAssessment, updateAssessmentStatus } from "@/app/actions/assessme
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import type { AssessmentStatus } from "@/lib/db/schema"
+import { IconButton } from "@/components/ui/icon-button"
 
 type Assessment = {
   id: string
@@ -71,17 +70,15 @@ export function AssessmentCard({ assessment }: { assessment: Assessment }) {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
-            <Link href={`/assessments/${assessment.id}/report`}>
-              <BarChart2 className="h-3.5 w-3.5 mr-1.5" /> Report
+          <IconButton size="sm" variant="ghost" icon={<BarChart2 className="h-3.5 w-3.5 mr-1.5" />}>
+            <Link href={`/assessments/${assessment.id}/report`} className="gap-1.5">
+              Report
             </Link>
-          </Button>
+          </IconButton>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={loading}>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
+              <IconButton size="sm" variant="ghost" icon={<MoreHorizontal className="h-4 w-4" />} disabled={loading} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={copyInviteLink}>

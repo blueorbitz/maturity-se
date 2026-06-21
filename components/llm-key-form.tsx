@@ -153,7 +153,7 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Select the API format your model uses (e.g., OpenAI format for Minimax, Anthropic format for Claude).
+                  Select the API format your model uses (e.g., OpenAI format or Anthropic format depending on the model choice).
                 </p>
               </div>
 
@@ -169,6 +169,7 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
                 />
                 <p className="text-xs text-muted-foreground">
                   Enter the full Bedrock model ID as it appears in the AWS console.
+                  (<a href="https://amazonbedrockmodels.github.io" target='blank'>click here for the list</a>)
                 </p>
               </div>
 
@@ -185,7 +186,7 @@ export function LlmKeyForm({ existing }: LlmKeyFormProps) {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="aws-region">Region</Label>
-                  <Select value={awsRegion} onValueChange={setAwsRegion}>
+                  <Select value={awsRegion} onValueChange={(value) => setAwsRegion(value || '')}>
                     <SelectTrigger id="aws-region">
                       <SelectValue />
                     </SelectTrigger>
