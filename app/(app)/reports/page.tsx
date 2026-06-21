@@ -1,6 +1,7 @@
 import { getMyAssessments } from "@/app/actions/assessments"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
+import { IconButton } from "@/components/ui/icon-button"
 import { BarChart2, ChevronRight, ClipboardList } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
@@ -33,12 +34,14 @@ export default async function ReportsPage() {
           <p className="text-sm text-muted-foreground mb-4 max-w-xs">
             Create and activate an assessment to start collecting responses and viewing reports.
           </p>
-          <Button asChild>
-            <Link href="/assessments/new">
-              <ClipboardList className="h-4 w-4 mr-2" />
+          <IconButton
+            size="sm"
+            icon={<ClipboardList className="h-4 w-4" />}
+          >
+            <Link href="/assessments/new" className="gap-1.5">
               Create an assessment
             </Link>
-          </Button>
+          </IconButton>
         </div>
       ) : (
         <div className="space-y-8">
@@ -98,7 +101,7 @@ export default async function ReportsPage() {
                         Activate this assessment to generate a report
                       </p>
                     </div>
-                    <Button asChild variant="outline" size="sm">
+                    <Button variant="outline" size="sm">
                       <Link href={`/assessments/${a.id}`}>Activate</Link>
                     </Button>
                   </div>

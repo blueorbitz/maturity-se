@@ -16,11 +16,10 @@ export default async function EditTemplatePage({ params }: { params: Promise<{ i
         <IconButton
           variant="ghost"
           size="sm"
-          asChild
+          icon={<ChevronLeft className="h-4 w-4" />}
           className="text-muted-foreground -ml-1"
         >
           <Link href={`/templates/${id}`} className="gap-1.5">
-            <ChevronLeft className="h-4 w-4" />
             Back to template
           </Link>
         </IconButton>

@@ -32,7 +32,7 @@ export default async function TemplatesPage() {
           <p className="text-sm text-muted-foreground mb-4 max-w-xs">
             Create your first maturity assessment template, either from scratch or with AI assistance.
           </p>
-          <Button asChild>
+          <Button>
             <Link href="/templates/new">Create your first template</Link>
           </Button>
         </div>

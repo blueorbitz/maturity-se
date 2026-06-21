@@ -25,7 +25,7 @@ export function InviteLinkBox({ token, status }: { token: string; status: Assess
         <Button variant="outline" size="icon" onClick={handleCopy} className="shrink-0">
           {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
         </Button>
-        <Button variant="outline" size="icon" asChild className="shrink-0">
+        <Button variant="outline" size="icon" className="shrink-0">
           <a href={`/respond/${token}`} target="_blank" rel="noopener noreferrer">
             <ExternalLink className="h-4 w-4" />
           </a>

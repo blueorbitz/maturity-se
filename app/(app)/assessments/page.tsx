@@ -32,7 +32,7 @@ export default async function AssessmentsPage() {
           <p className="text-sm text-muted-foreground mb-4 max-w-xs">
             Send a maturity questionnaire to your team and start collecting responses.
           </p>
-          <Button asChild>
+          <Button>
             <Link href="/assessments/new">Create your first assessment</Link>
           </Button>
         </div>

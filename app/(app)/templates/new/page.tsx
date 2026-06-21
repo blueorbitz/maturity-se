@@ -14,11 +14,10 @@ export default async function NewTemplatePage() {
         <IconButton
           variant="ghost"
           size="sm"
-          asChild
+          icon={<ChevronLeft className="h-4 w-4" />}
           className="text-muted-foreground -ml-1"
         >
           <Link href="/templates" className="gap-1.5">
-            <ChevronLeft className="h-4 w-4" />
             Templates
           </Link>
         </IconButton>

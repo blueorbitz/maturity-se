@@ -77,14 +77,14 @@ export function TemplateCard({ template, showActions = false, onClone }: Templat
           </div>
           {showActions && (
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              <DropdownMenuTrigger>
                 <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" disabled={loading}>
                   <MoreHorizontal className="h-4 w-4" />
                   <span className="sr-only">Actions</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
+                <DropdownMenuItem>
                   <Link href={`/templates/${template.id}/edit`}>
                     <Pencil className="h-4 w-4 mr-2" /> Edit
                   </Link>

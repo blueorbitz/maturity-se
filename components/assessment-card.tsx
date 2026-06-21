@@ -77,7 +77,7 @@ export function AssessmentCard({ assessment }: { assessment: Assessment }) {
           </IconButton>
 
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger>
               <IconButton size="sm" variant="ghost" icon={<MoreHorizontal className="h-4 w-4" />} disabled={loading} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
