@@ -3,13 +3,14 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { generateTemplate, saveTemplate } from "@/app/actions/templates"
+import { getMyCredits } from "@/app/actions/promo-codes"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
-import { Loader2, Sparkles, PenLine } from "lucide-react"
+import { Loader2, Sparkles, PenLine, Key, Zap, Check } from "lucide-react"
 import { TemplateEditor } from "@/components/template-editor"
 import type { Domain, ScaleLevel } from "@/lib/db/schema"
 import { nanoid } from "nanoid"
@@ -47,12 +48,20 @@ interface DraftTemplate {
   generatedByAi: boolean
 }
 
-export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
+interface NewTemplateFormProps {
+  hasLlmKey: boolean
+  defaultLlmMode: 'own_key' | 'platform_credits'
+  platformCreditsRemaining: number
+  onCreditsChanged?: (newRemaining: number) => void
+}
+
+export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRemaining, onCreditsChanged }: NewTemplateFormProps) {
   const router = useRouter()
   const [generating, setGenerating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [draft, setDraft] = useState<DraftTemplate | null>(null)
+  const [usePlatformCredits, setUsePlatformCredits] = useState(defaultLlmMode === 'platform_credits')
 
   const [title, setTitle] = useState("")
   const [topic, setTopic] = useState("")
@@ -65,6 +74,10 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
   const effectiveTopic = topic === "Custom" ? customTopic : topic
   const effectiveAudience = targetAudience === "Custom" ? customAudience : targetAudience
 
+  const canUseOwnKey = hasLlmKey
+  const canUsePlatformCredits = platformCreditsRemaining > 0
+  const canGenerate = canUseOwnKey || canUsePlatformCredits
+
   async function handleGenerate() {
     setError(null)
     setGenerating(true)
@@ -75,8 +88,14 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
         context: context || undefined,
         targetAudience: effectiveAudience,
         scaleLength: SCALE_LENGTH,
+        usePlatformCredits,
       })
       setDraft({ ...result, generatedByAi: true })
+
+      if (usePlatformCredits) {
+        const credits = await getMyCredits()
+        onCreditsChanged?.(credits.remaining)
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Generation failed")
     } finally {
@@ -232,8 +251,42 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
           <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
         )}
 
+        {canGenerate && canUseOwnKey && canUsePlatformCredits && (
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">LLM source for this generation</Label>
+            <div className="flex rounded-lg border border-input overflow-hidden">
+              <Button
+                size="sm"
+                onClick={() => setUsePlatformCredits(false)}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm transition-colors ${
+                  !usePlatformCredits
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'bg-muted/40 text-muted-foreground hover:bg-muted'
+                }`}
+                disabled={generating}
+              >
+                {!usePlatformCredits ? <Check className="h-3.5 w-3.5" /> : <Key className="h-3.5 w-3.5" />}
+                Use my key
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setUsePlatformCredits(true)}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm transition-colors ${
+                  usePlatformCredits
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'bg-muted/40 text-muted-foreground hover:bg-muted'
+                }`}
+                disabled={generating}
+              >
+                {usePlatformCredits ? <Check className="h-3.5 w-3.5" /> : <Zap className="h-3.5 w-3.5" />}
+                Use platform credits
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          {hasLlmKey ? (
+          {canGenerate ? (
             <Button
               onClick={handleGenerate}
               disabled={!canProceed || generating}
@@ -244,9 +297,20 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
                 : <><Sparkles className="h-4 w-4 mr-2" /> Generate with AI</>}
             </Button>
           ) : (
-            <div className="flex-1 flex items-center gap-2 text-sm text-muted-foreground bg-muted rounded-md px-3 py-2">
-              <Sparkles className="h-4 w-4 shrink-0" />
-              <span>AI generation requires an LLM key in <a href="/settings" className="text-primary underline">Settings</a></span>
+            <div className="flex-1 space-y-2 text-sm text-muted-foreground bg-muted rounded-md px-3 py-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 shrink-0" />
+                <span>Add an LLM key in Settings or redeem a promo code to generate templates with AI.</span>
+              </div>
+              <div className="flex gap-2 pl-6">
+                <a href="/settings#llm-provider" className="text-primary underline text-xs hover:text-primary/80">
+                  Add LLM key
+                </a>
+                <span className="text-muted-foreground/50">|</span>
+                <a href="/settings" className="text-primary underline text-xs hover:text-primary/80">
+                  Redeem promo code
+                </a>
+              </div>
             </div>
           )}
           <Button
