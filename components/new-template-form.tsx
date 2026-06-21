@@ -90,7 +90,11 @@ export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRema
         scaleLength: SCALE_LENGTH,
         usePlatformCredits,
       })
-      setDraft({ ...result, generatedByAi: true })
+      if (!result.success) {
+        setError(result.error)
+        return
+      }
+      setDraft({ ...result.data, generatedByAi: true })
 
       if (usePlatformCredits) {
         const credits = await getMyCredits()

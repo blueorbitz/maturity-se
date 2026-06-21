@@ -49,42 +49,43 @@ export async function generateTemplate(formData: {
   targetAudience: string
   scaleLength: number
   usePlatformCredits?: boolean
-}) {
-  const userId = await getUserId()
+}): Promise<{ success: true; data: { title: string; topic: string; context?: string; targetAudience: string; scaleLength: number; scaleLevels: ScaleLevel[]; domains: Domain[] } } | { success: false; error: string }> {
+  try {
+    const userId = await getUserId()
 
-  const parsed = GenerateSchema.safeParse(formData)
-  if (!parsed.success) throw new Error("Invalid input: " + parsed.error.message)
+    const parsed = GenerateSchema.safeParse(formData)
+    if (!parsed.success) return { success: false, error: "Invalid input: " + parsed.error.message }
 
-  const data = parsed.data
-  const title = sanitizeForLlm(data.title)
-  const topic = sanitizeForLlm(data.topic)
-  const context = data.context ? sanitizeForLlm(data.context) : ""
-  const targetAudience = sanitizeForLlm(data.targetAudience)
-  const scaleLength = clampInt(data.scaleLength, 2, 10, 5)
-  const usePlatformCredits = formData.usePlatformCredits ?? false
+    const data = parsed.data
+    const title = sanitizeForLlm(data.title)
+    const topic = sanitizeForLlm(data.topic)
+    const context = data.context ? sanitizeForLlm(data.context) : ""
+    const targetAudience = sanitizeForLlm(data.targetAudience)
+    const scaleLength = clampInt(data.scaleLength, 2, 10, 5)
+    const usePlatformCredits = formData.usePlatformCredits ?? false
 
-  let provider: string
-  let model: string | null = null
+    let provider: string
+    let model: string | null = null
 
-  if (usePlatformCredits) {
-    // Check user has remaining credits
-    const credits = await getMyCredits()
-    if (credits.remaining <= 0) {
-      throw new Error("No platform credits remaining. Please add an LLM key in Settings or redeem a promo code.")
+    if (usePlatformCredits) {
+      // Check user has remaining credits
+      const credits = await getMyCredits()
+      if (credits.remaining <= 0) {
+        return { success: false, error: "No platform credits remaining. Please add an LLM key in Settings or redeem a promo code." }
+      }
+      provider = "platform"
+      model = getPlatformLlmModel()
+    } else {
+      // Use user's own key
+      const [keyRecord] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
+      if (!keyRecord) return { success: false, error: "No LLM API key configured. Please add one in Settings." }
+      provider = keyRecord.provider
+      model = keyRecord.model
     }
-    provider = "platform"
-    model = getPlatformLlmModel()
-  } else {
-    // Use user's own key
-    const [keyRecord] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
-    if (!keyRecord) throw new Error("No LLM API key configured. Please add one in Settings.")
-    provider = keyRecord.provider
-    model = keyRecord.model
-  }
 
-  const scaleExamples = Array.from({ length: scaleLength }, (_, i) => `${i + 1}`).join(", ")
+    const scaleExamples = Array.from({ length: scaleLength }, (_, i) => `${i + 1}`).join(", ")
 
-  const prompt = `You are a software engineering maturity assessment expert.
+    const prompt = `You are a software engineering maturity assessment expert.
 
 Generate a comprehensive maturity assessment template with the following specification:
 - Title: ${title}
@@ -119,58 +120,65 @@ Rules:
 - IDs must be unique strings (use kebab-case)
 - No markdown, no prose, only the JSON object`
 
-  let raw: string
+    let raw: string
 
-  if (usePlatformCredits) {
-    raw = await callLlmWithPlatformCredentials(prompt)
-  } else {
-    const [keyRecord] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
-    if (!keyRecord) throw new Error("No LLM API key configured. Please add one in Settings.")
-    raw = await callLlm(keyRecord, prompt)
-  }
-
-  // Log LLM usage
-  await db.insert(llmUsageLog).values({
-    id: nanoid(),
-    userId,
-    feature: "template_generation",
-    provider,
-    model,
-  })
-
-  // Extract JSON from response (strip any accidental markdown fences or prose)
-  // Match the outermost JSON object: find first { and last }
-  const firstBrace = raw.indexOf('{')
-  const lastBrace = raw.lastIndexOf('}')
-  
-  if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
-    throw new Error("LLM returned an unexpected response format. Please try again.")
-  }
-  
-  const jsonStr = raw.substring(firstBrace, lastBrace + 1)
-
-  let parsed2: { scaleLevels: ScaleLevel[]; domains: Domain[] }
-  try {
-    parsed2 = JSON.parse(jsonStr) as {
-      scaleLevels: ScaleLevel[]
-      domains: Domain[]
+    if (usePlatformCredits) {
+      raw = await callLlmWithPlatformCredentials(prompt)
+    } else {
+      const [keyRecord] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
+      if (!keyRecord) return { success: false, error: "No LLM API key configured. Please add one in Settings." }
+      raw = await callLlm(keyRecord, prompt)
     }
-  } catch {
-    throw new Error("LLM returned invalid JSON. Please try again.")
-  }
 
-  if (!Array.isArray(parsed2.scaleLevels) || !Array.isArray(parsed2.domains)) {
-    throw new Error("LLM response missing required fields.")
-  }
+    // Log LLM usage
+    await db.insert(llmUsageLog).values({
+      id: nanoid(),
+      userId,
+      feature: "template_generation",
+      provider,
+      model,
+    })
 
-  return {
-    title: data.title,
-    topic: data.topic,
-    context: data.context,
-    targetAudience: data.targetAudience,
-    scaleLength,
-    scaleLevels: parsed2.scaleLevels,
-    domains: parsed2.domains,
+    // Extract JSON from response (strip any accidental markdown fences or prose)
+    // Match the outermost JSON object: find first { and last }
+    const firstBrace = raw.indexOf('{')
+    const lastBrace = raw.lastIndexOf('}')
+    
+    if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+      return { success: false, error: "LLM returned an unexpected response format. Please try again." }
+    }
+    
+    const jsonStr = raw.substring(firstBrace, lastBrace + 1)
+
+    let parsed2: { scaleLevels: ScaleLevel[]; domains: Domain[] }
+    try {
+      parsed2 = JSON.parse(jsonStr) as {
+        scaleLevels: ScaleLevel[]
+        domains: Domain[]
+      }
+    } catch {
+      return { success: false, error: "LLM returned invalid JSON. Please try again." }
+    }
+
+    if (!Array.isArray(parsed2.scaleLevels) || !Array.isArray(parsed2.domains)) {
+      return { success: false, error: "LLM response missing required fields." }
+    }
+
+    return {
+      success: true,
+      data: {
+        title: data.title,
+        topic: data.topic,
+        context: data.context,
+        targetAudience: data.targetAudience,
+        scaleLength,
+        scaleLevels: parsed2.scaleLevels,
+        domains: parsed2.domains,
+      },
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "An unexpected error occurred."
+    return { success: false, error: msg }
   }
 }
 
