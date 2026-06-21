@@ -5,9 +5,12 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core"
 
 // ─── Better Auth Tables ───────────────────────────────────────────────────────
+
+export type DefaultLlmMode = "own_key" | "platform_credits"
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -15,6 +18,7 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("emailVerified").notNull().default(false),
   image: text("image"),
+  defaultLlmMode: text("defaultLlmMode").notNull().default("own_key").$type<DefaultLlmMode>(),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 })
@@ -161,4 +165,19 @@ export const promoCodeRedemptions = pgTable("promo_code_redemptions", {
     .notNull()
     .references(() => promoCodes.id, { onDelete: "cascade" }),
   redeemedAt: timestamp("redeemedAt").notNull().defaultNow(),
+}, (t) => [
+  unique("promo_code_redemptions_user_code_unique").on(t.userId, t.promoCodeId),
+])
+
+// ─── LLM Usage Log ────────────────────────────────────────────────────────────
+
+export const llmUsageLog = pgTable("llm_usage_log", {
+  id: text("id").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  feature: text("feature").notNull().default("template_generation"),
+  provider: text("provider").notNull(),
+  model: text("model"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
 })

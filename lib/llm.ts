@@ -33,6 +33,57 @@ export async function callLlm(
   throw new Error(`Unsupported provider: ${keyRecord.provider}`)
 }
 
+/**
+ * Calls LLM using platform-provided AWS credentials from environment variables.
+ * Throws if env vars are missing.
+ */
+export async function callLlmWithPlatformCredentials(prompt: string): Promise<string> {
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
+  const region = process.env.PLATFORM_LLM_REGION || "us-east-1"
+  const modelId = process.env.PLATFORM_LLM_MODEL || "minimax.minimax-m2.5"
+
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error("Platform LLM credentials not configured. Contact the administrator.")
+  }
+
+  const client = new BedrockRuntimeClient({
+    region,
+    credentials: { accessKeyId, secretAccessKey },
+  })
+
+  // Platform uses OpenAI format by default (Minimax models)
+  const requestBody = JSON.stringify({
+    messages: [{ role: "user", content: prompt }],
+    max_tokens: 4096,
+  })
+
+  const command = new InvokeModelCommand({
+    modelId,
+    contentType: "application/json",
+    accept: "application/json",
+    body: Buffer.from(requestBody),
+  })
+
+  const response = await client.send(command)
+  const result = JSON.parse(Buffer.from(response.body).toString())
+
+  if (result.error) {
+    throw new Error(`Platform LLM error: ${result.error}`)
+  }
+
+  const text = result.choices?.[0]?.message?.content ?? ""
+  if (!text) {
+    throw new Error(`Platform LLM (${modelId}) returned an empty response.`)
+  }
+
+  return text
+}
+
+export function getPlatformLlmModel(): string {
+  return process.env.PLATFORM_LLM_MODEL || "minimax.minimax-m2.5"
+}
+
 async function callOpenAi(encryptedKey: string, prompt: string, model: string): Promise<string> {
   const apiKey = await decrypt(encryptedKey)
 

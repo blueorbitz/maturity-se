@@ -47,12 +47,19 @@ interface DraftTemplate {
   generatedByAi: boolean
 }
 
-export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
+interface NewTemplateFormProps {
+  hasLlmKey: boolean
+  defaultLlmMode: 'own_key' | 'platform_credits'
+  platformCreditsRemaining: number
+}
+
+export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRemaining }: NewTemplateFormProps) {
   const router = useRouter()
   const [generating, setGenerating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [draft, setDraft] = useState<DraftTemplate | null>(null)
+  const [usePlatformCredits, setUsePlatformCredits] = useState(defaultLlmMode === 'platform_credits')
 
   const [title, setTitle] = useState("")
   const [topic, setTopic] = useState("")
@@ -65,6 +72,10 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
   const effectiveTopic = topic === "Custom" ? customTopic : topic
   const effectiveAudience = targetAudience === "Custom" ? customAudience : targetAudience
 
+  const canUseOwnKey = hasLlmKey
+  const canUsePlatformCredits = platformCreditsRemaining > 0
+  const canGenerate = canUseOwnKey || canUsePlatformCredits
+
   async function handleGenerate() {
     setError(null)
     setGenerating(true)
@@ -75,6 +86,7 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
         context: context || undefined,
         targetAudience: effectiveAudience,
         scaleLength: SCALE_LENGTH,
+        usePlatformCredits,
       })
       setDraft({ ...result, generatedByAi: true })
     } catch (err: unknown) {
@@ -233,7 +245,7 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
         )}
 
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          {hasLlmKey ? (
+          {canGenerate ? (
             <Button
               onClick={handleGenerate}
               disabled={!canProceed || generating}
@@ -246,7 +258,10 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
           ) : (
             <div className="flex-1 flex items-center gap-2 text-sm text-muted-foreground bg-muted rounded-md px-3 py-2">
               <Sparkles className="h-4 w-4 shrink-0" />
-              <span>AI generation requires an LLM key in <a href="/settings" className="text-primary underline">Settings</a></span>
+              <span>
+                AI generation requires an LLM key or platform credits.{' '}
+                <a href="/settings" className="text-primary underline">Add in Settings</a>
+              </span>
             </div>
           )}
           <Button
@@ -258,6 +273,18 @@ export function NewTemplateForm({ hasLlmKey }: { hasLlmKey: boolean }) {
             <PenLine className="h-4 w-4 mr-2" /> Build manually
           </Button>
         </div>
+        {canGenerate && canUseOwnKey && canUsePlatformCredits && (
+          <p className="text-xs text-muted-foreground text-center pt-1">
+            Using {usePlatformCredits ? 'platform credits' : 'own key'}{' '}
+            <button
+              type="button"
+              onClick={() => setUsePlatformCredits(!usePlatformCredits)}
+              className="underline hover:text-foreground"
+            >
+              (switch)
+            </button>
+          </p>
+        )}
       </CardContent>
     </Card>
   )

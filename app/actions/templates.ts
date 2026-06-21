@@ -2,14 +2,15 @@
 
 import { getUserId } from "@/lib/auth-helpers"
 import { db } from "@/lib/db"
-import { llmKeys, templates } from "@/lib/db/schema"
+import { llmKeys, templates, llmUsageLog } from "@/lib/db/schema"
 import type { Domain, ScaleLevel, Visibility } from "@/lib/db/schema"
-import { callLlm } from "@/lib/llm"
+import { callLlm, callLlmWithPlatformCredentials, getPlatformLlmModel } from "@/lib/llm"
 import { sanitizeForLlm, clampInt } from "@/lib/sanitize"
 import { and, desc, eq, or } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+import { getMyCredits } from "./promo-codes"
 
 // ─── Zod schemas ─────────────────────────────────────────────────────────────
 
@@ -47,6 +48,7 @@ export async function generateTemplate(formData: {
   context?: string
   targetAudience: string
   scaleLength: number
+  usePlatformCredits?: boolean
 }) {
   const userId = await getUserId()
 
@@ -59,9 +61,26 @@ export async function generateTemplate(formData: {
   const context = data.context ? sanitizeForLlm(data.context) : ""
   const targetAudience = sanitizeForLlm(data.targetAudience)
   const scaleLength = clampInt(data.scaleLength, 2, 10, 5)
+  const usePlatformCredits = formData.usePlatformCredits ?? false
 
-  const [keyRecord] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
-  if (!keyRecord) throw new Error("No LLM API key configured. Please add one in Settings.")
+  let provider: string
+  let model: string | null = null
+
+  if (usePlatformCredits) {
+    // Check user has remaining credits
+    const credits = await getMyCredits()
+    if (credits.remaining <= 0) {
+      throw new Error("No platform credits remaining. Please add an LLM key in Settings or redeem a promo code.")
+    }
+    provider = "platform"
+    model = getPlatformLlmModel()
+  } else {
+    // Use user's own key
+    const [keyRecord] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
+    if (!keyRecord) throw new Error("No LLM API key configured. Please add one in Settings.")
+    provider = keyRecord.provider
+    model = keyRecord.model
+  }
 
   const scaleExamples = Array.from({ length: scaleLength }, (_, i) => `${i + 1}`).join(", ")
 
@@ -100,7 +119,24 @@ Rules:
 - IDs must be unique strings (use kebab-case)
 - No markdown, no prose, only the JSON object`
 
-  const raw = await callLlm(keyRecord, prompt)
+  let raw: string
+
+  if (usePlatformCredits) {
+    raw = await callLlmWithPlatformCredentials(prompt)
+  } else {
+    const [keyRecord] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
+    if (!keyRecord) throw new Error("No LLM API key configured. Please add one in Settings.")
+    raw = await callLlm(keyRecord, prompt)
+  }
+
+  // Log LLM usage
+  await db.insert(llmUsageLog).values({
+    id: nanoid(),
+    userId,
+    feature: "template_generation",
+    provider,
+    model,
+  })
 
   // Extract JSON from response (strip any accidental markdown fences or prose)
   // Match the outermost JSON object: find first { and last }

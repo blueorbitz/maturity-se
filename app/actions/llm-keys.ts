@@ -2,7 +2,7 @@
 
 import { getUserId } from "@/lib/auth-helpers"
 import { db } from "@/lib/db"
-import { llmKeys, type ApiFormat } from "@/lib/db/schema"
+import { llmKeys, user, type ApiFormat, type DefaultLlmMode, type LlmProvider } from "@/lib/db/schema"
 import { encrypt } from "@/lib/crypto"
 import { eq } from "drizzle-orm"
 import { nanoid } from "nanoid"
@@ -135,7 +135,7 @@ export async function testLlmConnection(): Promise<{ success: boolean; message: 
     const testPrompt = "Reply with exactly: Connection successful"
     const response = await callLlm(
       {
-        provider: keyRecord.provider as LLMProvider,
+        provider: keyRecord.provider as LlmProvider,
         encryptedKey: keyRecord.encryptedKey,
         model: keyRecord.model ?? undefined,
         apiFormat: keyRecord.apiFormat as ApiFormat,
@@ -154,4 +154,26 @@ export async function testLlmConnection(): Promise<{ success: boolean; message: 
     const errorMsg = error instanceof Error ? error.message : String(error)
     return { success: false, message: `Connection failed: ${errorMsg}` }
   }
+}
+
+export async function updateDefaultLlmMode(
+  mode: DefaultLlmMode
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getUserId()
+    if (mode !== "own_key" && mode !== "platform_credits") {
+      return { success: false, error: "Invalid LLM mode." }
+    }
+    await db.update(user).set({ defaultLlmMode: mode }).where(eq(user.id, userId))
+    revalidatePath("/settings")
+    return { success: true }
+  } catch {
+    return { success: false, error: "Failed to update preference." }
+  }
+}
+
+export async function getDefaultLlmMode(): Promise<DefaultLlmMode> {
+  const userId = await getUserId()
+  const [row] = await db.select({ defaultLlmMode: user.defaultLlmMode }).from(user).where(eq(user.id, userId))
+  return row?.defaultLlmMode ?? "own_key"
 }

@@ -2,11 +2,12 @@ import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { llmKeys, promoCodes, promoCodeRedemptions } from '@/lib/db/schema'
-import { eq, sql } from 'drizzle-orm'
+import { llmKeys, promoCodes, promoCodeRedemptions, llmUsageLog, user } from '@/lib/db/schema'
+import { and, eq, sql } from 'drizzle-orm'
 import { PageHeader } from '@/components/page-header'
 import { LlmKeyForm } from '@/components/llm-key-form'
 import { PromoCodeForm } from '@/components/promo-code-form'
+import { LlmPreferenceToggle } from '@/components/llm-preference-toggle'
 
 export default async function SettingsPage() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -19,6 +20,14 @@ export default async function SettingsPage() {
     .limit(1)
     .then((r) => r[0] ?? null)
 
+  // Fetch user's default LLM mode
+  const [userRow] = await db
+    .select({ defaultLlmMode: user.defaultLlmMode })
+    .from(user)
+    .where(eq(user.id, session.user.id))
+
+  const defaultLlmMode = userRow?.defaultLlmMode ?? 'own_key'
+
   // Fetch user's platform credits
   const [grantedResult] = await db
     .select({
@@ -28,7 +37,23 @@ export default async function SettingsPage() {
     .innerJoin(promoCodes, eq(promoCodeRedemptions.promoCodeId, promoCodes.id))
     .where(eq(promoCodeRedemptions.userId, session.user.id))
 
-  const creditsRemaining = Number(grantedResult?.total ?? 0)
+  const totalGranted = Number(grantedResult?.total ?? 0)
+
+  // Count platform LLM usages
+  const [usedResult] = await db
+    .select({
+      total: sql<number>`coalesce(count(*), 0)`,
+    })
+    .from(llmUsageLog)
+    .where(
+      and(
+        eq(llmUsageLog.userId, session.user.id),
+        eq(llmUsageLog.provider, "platform")
+      )
+    )
+
+  const used = Number(usedResult?.total ?? 0)
+  const creditsRemaining = totalGranted - used
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -41,20 +66,27 @@ export default async function SettingsPage() {
         </div>
       </div>
       <div className="flex-1 max-w-3xl mx-auto px-6 py-8 w-full space-y-6">
-        <LlmKeyForm
-          existing={
-            existing
-              ? {
-                  provider: existing.provider,
-                  keyHint: existing.keyHint,
-                  model: existing.model,
-                  apiFormat: existing.apiFormat,
-                  awsRegion: existing.awsRegion,
-                  awsAccessKeyId: existing.awsAccessKeyId,
-                }
-              : null
-          }
+        <LlmPreferenceToggle
+          currentMode={defaultLlmMode}
+          hasLlmKey={!!existing}
+          creditsRemaining={creditsRemaining}
         />
+        <div id="llm-provider">
+          <LlmKeyForm
+            existing={
+              existing
+                ? {
+                    provider: existing.provider,
+                    keyHint: existing.keyHint,
+                    model: existing.model,
+                    apiFormat: existing.apiFormat,
+                    awsRegion: existing.awsRegion,
+                    awsAccessKeyId: existing.awsAccessKeyId,
+                  }
+                : null
+            }
+          />
+        </div>
         <PromoCodeForm creditsRemaining={creditsRemaining} />
       </div>
     </div>

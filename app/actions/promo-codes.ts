@@ -2,7 +2,7 @@
 
 import { getUserId } from "@/lib/auth-helpers"
 import { db } from "@/lib/db"
-import { promoCodes, promoCodeRedemptions } from "@/lib/db/schema"
+import { promoCodes, promoCodeRedemptions, llmUsageLog } from "@/lib/db/schema"
 import { and, eq, sql } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
@@ -88,9 +88,20 @@ export async function getMyCredits(): Promise<{
 
   const totalGranted = Number(grantedResult?.total ?? 0)
 
-  // Count platform LLM usages (to be used in Issue 2 when llm_usage_log exists)
-  // For now, usage is 0 since the log table doesn't exist yet
-  const used = 0
+  // Count platform LLM usages
+  const [usedResult] = await db
+    .select({
+      total: sql<number>`coalesce(count(*), 0)`,
+    })
+    .from(llmUsageLog)
+    .where(
+      and(
+        eq(llmUsageLog.userId, userId),
+        eq(llmUsageLog.provider, "platform")
+      )
+    )
+
+  const used = Number(usedResult?.total ?? 0)
 
   return {
     totalGranted,

@@ -1,4 +1,5 @@
-import { getLlmKeyInfo } from "@/app/actions/llm-keys"
+import { getLlmKeyInfo, getDefaultLlmMode } from "@/app/actions/llm-keys"
+import { getMyCredits } from "@/app/actions/promo-codes"
 import { NewTemplateForm } from "@/components/new-template-form"
 import { PageHeader } from "@/components/page-header"
 import { IconButton } from "@/components/ui/icon-button"
@@ -6,7 +7,11 @@ import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 
 export default async function NewTemplatePage() {
-  const keyInfo = await getLlmKeyInfo()
+  const [keyInfo, defaultLlmMode, credits] = await Promise.all([
+    getLlmKeyInfo(),
+    getDefaultLlmMode(),
+    getMyCredits(),
+  ])
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -26,7 +31,11 @@ export default async function NewTemplatePage() {
         title="New Template"
         description="Define your assessment scope and generate a questionnaire template with AI or build one manually."
       />
-      <NewTemplateForm hasLlmKey={!!keyInfo} />
+      <NewTemplateForm
+        hasLlmKey={!!keyInfo}
+        defaultLlmMode={defaultLlmMode}
+        platformCreditsRemaining={credits.remaining}
+      />
     </div>
   )
 }
