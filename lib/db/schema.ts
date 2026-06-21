@@ -141,3 +141,24 @@ export const llmKeys = pgTable("llm_keys", {
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 })
+
+// ─── Promo Code Tables ────────────────────────────────────────────────────────
+
+export const promoCodes = pgTable("promo_codes", {
+  id: text("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  generations: integer("generations").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+})
+
+export const promoCodeRedemptions = pgTable("promo_code_redemptions", {
+  id: text("id").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  promoCodeId: text("promoCodeId")
+    .notNull()
+    .references(() => promoCodes.id, { onDelete: "cascade" }),
+  redeemedAt: timestamp("redeemedAt").notNull().defaultNow(),
+})
