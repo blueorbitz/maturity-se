@@ -5,9 +5,7 @@ import { db } from '@/lib/db'
 import { llmKeys, promoCodes, promoCodeRedemptions, llmUsageLog, user } from '@/lib/db/schema'
 import { and, eq, sql } from 'drizzle-orm'
 import { PageHeader } from '@/components/page-header'
-import { LlmKeyForm } from '@/components/llm-key-form'
-import { PromoCodeForm } from '@/components/promo-code-form'
-import { LlmPreferenceToggle } from '@/components/llm-preference-toggle'
+import { SettingsClient } from '@/components/settings-client'
 
 export default async function SettingsPage() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -20,7 +18,6 @@ export default async function SettingsPage() {
     .limit(1)
     .then((r) => r[0] ?? null)
 
-  // Fetch user's default LLM mode
   const [userRow] = await db
     .select({ defaultLlmMode: user.defaultLlmMode })
     .from(user)
@@ -28,7 +25,6 @@ export default async function SettingsPage() {
 
   const defaultLlmMode = userRow?.defaultLlmMode ?? 'own_key'
 
-  // Fetch user's platform credits
   const [grantedResult] = await db
     .select({
       total: sql<number>`coalesce(sum(${promoCodes.generations}), 0)`,
@@ -39,7 +35,6 @@ export default async function SettingsPage() {
 
   const totalGranted = Number(grantedResult?.total ?? 0)
 
-  // Count platform LLM usages
   const [usedResult] = await db
     .select({
       total: sql<number>`coalesce(count(*), 0)`,
@@ -65,30 +60,23 @@ export default async function SettingsPage() {
           />
         </div>
       </div>
-      <div className="flex-1 max-w-3xl mx-auto px-6 py-8 w-full space-y-6">
-        <LlmPreferenceToggle
-          currentMode={defaultLlmMode}
-          hasLlmKey={!!existing}
-          creditsRemaining={creditsRemaining}
-        />
-        <div id="llm-provider">
-          <LlmKeyForm
-            existing={
-              existing
-                ? {
-                    provider: existing.provider,
-                    keyHint: existing.keyHint,
-                    model: existing.model,
-                    apiFormat: existing.apiFormat,
-                    awsRegion: existing.awsRegion,
-                    awsAccessKeyId: existing.awsAccessKeyId,
-                  }
-                : null
-            }
-          />
-        </div>
-        <PromoCodeForm creditsRemaining={creditsRemaining} />
-      </div>
+      <SettingsClient
+        defaultLlmMode={defaultLlmMode}
+        hasLlmKey={!!existing}
+        creditsRemaining={creditsRemaining}
+        llmKeyExisting={
+          existing
+            ? {
+                provider: existing.provider,
+                keyHint: existing.keyHint,
+                model: existing.model,
+                apiFormat: existing.apiFormat,
+                awsRegion: existing.awsRegion,
+                awsAccessKeyId: existing.awsAccessKeyId,
+              }
+            : null
+        }
+      />
     </div>
   )
 }
