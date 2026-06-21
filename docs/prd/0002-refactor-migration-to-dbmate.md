@@ -30,6 +30,7 @@ Convert existing migrations 001 and 002 to dbmate format, preserving the numbere
 4. As a developer, I want the `schema_migrations` table to track applied migrations, so that running `dbmate up` twice is safe (idempotent).
 5. As a developer, I want migration 001 (`promo_codes` tables) to be represented in dbmate format, so that it can be applied to production.
 6. As a developer, I want migration 002 (`llm_usage_log` table, `defaultLlmMode` column, unique constraint) to be represented in dbmate format, so that it can be applied to production (which is currently missing it).
+7. As a developer, I want migration 003 (`enabled` column on `promo_codes`) to be represented in dbmate format, so that it can be applied to all environments.
 7. As a developer, I want the WIP migrations to be preserved during the refactor, so that in-progress work is not lost.
 8. As a developer, I want the old migration files removed after conversion, so that there is a single source of truth for migrations.
 9. As a developer, I want the migration naming convention to include the numbered prefix (`0001_`, `0002_`), so that migrations are traceable to the issue tracker.
@@ -43,15 +44,16 @@ Convert existing migrations 001 and 002 to dbmate format, preserving the numbere
 
 - **Tool:** dbmate (installed via npm as a dev dependency)
 - **Config:** `DATABASE_URL` environment variable (already exists in `.env.development.local`)
-- **Migration directory:** `migrations/` (same location, new file format)
+- **Migration directory:** `db/migrations/` (dbmate default location)
 
 ### File Naming Convention
 
 ```
-migrations/
+db/migrations/
 ├── 20260621120000_0001_promo_codes.sql
 ├── 20260621120001_0002_llm_usage_log.sql
-└── 20260621120002_<future_migration>.sql
+├── 20260621120002_0003_promo_codes_add_enabled.sql
+└── 20260621120003_<future_migration>.sql
 ```
 
 - Timestamp prefix (`YYYYMMDDHHMMSS`) ensures ordering and avoids conflicts between developers
@@ -77,6 +79,12 @@ migrations/
 - Drops `llm_usage_log` table
 - Removes `defaultLlmMode` column from `user` table
 - Drops unique constraint on `promo_code_redemptions`
+
+**003_promo_codes_add_enabled.sql (up):**
+- Adds `enabled` column to `promo_codes` table (with `IF NOT EXISTS` guard)
+
+**003_promo_codes_add_enabled.sql (down):**
+- Drops `enabled` column from `promo_codes` table
 
 ### Safety Guards
 
@@ -107,6 +115,10 @@ After conversion, remove the old migration files:
 - `migrations/001_promo_codes_seed.js`
 - `migrations/002_llm_usage_log_up.js`
 - `migrations/002_llm_usage_log_down.js`
+- `migrations/003_promo_codes_add_enabled_up.js`
+- `migrations/003_promo_codes_add_enabled_down.js`
+
+The `migrations/` directory is then replaced by `db/migrations/`.
 
 ## Testing Decisions
 
@@ -121,8 +133,10 @@ Tests should verify that:
 ### Key Test Scenarios
 
 - Fresh database: `dbmate up` creates all tables correctly
-- Existing database with 001 applied: `dbmate up` applies only 002 (no-op for 001)
-- Existing database with both 001 and 002 applied: `dbmate up` is a no-op
+- Existing database with 001 applied: `dbmate up` applies only 002 and 003 (no-op for 001)
+- Existing database with 001 and 002 applied: `dbmate up` applies only 003 (no-op for 001, 002)
+- Existing database with all 001, 002, and 003 applied: `dbmate up` is a no-op
+- `dbmate rollback` after applying 003: removes 003 changes, 001 and 002 remain
 - `dbmate rollback` after applying 002: removes 002 changes, 001 remains
 - `dbmate rollback` after applying 001: removes 001 changes (cascading drops)
 
