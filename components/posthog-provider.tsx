@@ -1,32 +1,53 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import posthog from 'posthog-js'
 
-if (typeof window !== 'undefined') {
-  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY
-  if (key && !posthog.__loaded) {
-    posthog.init(key, {
-      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
-      capture_pageview: false,
-      capture_pageleave: true,
-    })
-  }
+const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY
+const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com'
+
+let initialized = false
+
+function initPostHog() {
+  if (typeof window === 'undefined' || !POSTHOG_KEY || initialized) return
+  initialized = true
+  posthog.init(POSTHOG_KEY, {
+    api_host: POSTHOG_HOST,
+    capture_pageview: false,
+    capture_pageleave: true,
+  })
 }
 
-export function PostHogProvider({ children }: { children: React.ReactNode }) {
+function PostHogPageView() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const lastUrl = useRef<string>('')
 
   useEffect(() => {
-    if (!pathname) return
+    initPostHog()
+  }, [])
+
+  useEffect(() => {
+    if (!pathname || !initialized) return
     let url = pathname
-    if (searchParams?.toString()) {
-      url += `?${searchParams.toString()}`
-    }
+    const qs = searchParams?.toString()
+    if (qs) url += `?${qs}`
+    if (url === lastUrl.current) return
+    lastUrl.current = url
     posthog.capture('$pageview', { $current_url: url, $pathname: pathname })
   }, [pathname, searchParams])
 
-  return <>{children}</>
+  return null
+}
+
+export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <Suspense fallback={null}>
+        <PostHogPageView />
+      </Suspense>
+      {children}
+    </>
+  )
 }
