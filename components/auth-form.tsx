@@ -1,6 +1,7 @@
 "use client"
 
 import { authClient } from "@/lib/auth-client"
+import posthog from "posthog-js"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -33,9 +34,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
       if (mode === "sign-up") {
         const res = await authClient.signUp.email({ email, password, name: name! })
         if (res.error) throw new Error(res.error.message ?? "Sign up failed")
+        posthog.capture('sign_up', { method: 'email' })
       } else {
         const res = await authClient.signIn.email({ email, password })
         if (res.error) throw new Error(res.error.message ?? "Sign in failed")
+        posthog.capture('sign_in', { method: 'email' })
       }
       router.push("/dashboard")
       router.refresh()

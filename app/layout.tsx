@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Plus_Jakarta_Sans } from 'next/font/google'
+import { PostHogProvider } from '@/components/posthog-provider'
 import './globals.css'
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-sans', weight: ['400', '500', '600', '700'] })
@@ -28,7 +29,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${plusJakartaSans.variable} bg-background`}>
       <body className="font-sans antialiased min-h-screen">
-        {children}
+        <PostHogProvider>
+          {children}
+        </PostHogProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

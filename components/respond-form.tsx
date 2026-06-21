@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { submitResponse } from '@/app/actions/assessments'
+import posthog from 'posthog-js'
 
 type ScaleLevel = { level: number; label: string; description: string }
 type Question = { id: string; text: string; weight: number }
@@ -59,6 +60,7 @@ export function RespondForm({ assessment, template }: RespondFormProps) {
       setError(result.error)
       setSubmitting(false)
     } else {
+      posthog.capture('response_submitted', { template_id: assessment.id })
       setStep('done')
     }
   }

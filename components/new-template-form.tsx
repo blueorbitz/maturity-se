@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { generateTemplate, saveTemplate } from "@/app/actions/templates"
 import { getMyCredits } from "@/app/actions/promo-codes"
+import posthog from "posthog-js"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -100,6 +101,8 @@ export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRema
         const credits = await getMyCredits()
         onCreditsChanged?.(credits.remaining)
       }
+
+      posthog.capture('template_ai_generated', { prompt_length: (context || '').length })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Generation failed")
     } finally {
@@ -148,6 +151,7 @@ export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRema
         visibility: "private",
         generatedByAi: updated.generatedByAi,
       })
+      posthog.capture('template_created', { generated_by_ai: updated.generatedByAi })
       router.push(`/templates/${id}`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Save failed")

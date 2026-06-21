@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { saveTemplate } from "@/app/actions/templates"
+import posthog from "posthog-js"
 import { TemplateEditor } from "@/components/template-editor"
 import type { Domain, ScaleLevel } from "@/lib/db/schema"
 
@@ -30,6 +31,8 @@ export function TemplateEditorPage({ templateId, initialData }: Props) {
     setSaving(true)
     setError(null)
     try {
+      const prevVisibility = initialData.visibility ?? 'private'
+      const newVisibility = data.visibility ?? 'private'
       await saveTemplate({
         id: templateId,
         title: data.title,
@@ -39,9 +42,12 @@ export function TemplateEditorPage({ templateId, initialData }: Props) {
         scaleLength: data.scaleLength,
         scaleLevels: data.scaleLevels,
         domains: data.domains,
-        visibility: data.visibility ?? "private",
+        visibility: newVisibility,
         generatedByAi: data.generatedByAi,
       })
+      if (prevVisibility !== newVisibility) {
+        posthog.capture('template_visibility_changed', { from: prevVisibility, to: newVisibility })
+      }
       router.push(`/templates/${templateId}`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Save failed")

@@ -6,6 +6,7 @@ import { cloneTemplate } from "@/app/actions/templates"
 import { TemplateCard } from "@/components/template-card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import posthog from "posthog-js"
 import { Search, Globe } from "lucide-react"
 
 type Template = {
@@ -45,6 +46,7 @@ export function GalleryClient({ templates }: { templates: Template[] }) {
     setCloning(id)
     try {
       const { id: newId } = await cloneTemplate(id)
+      posthog.capture('gallery_template_cloned', { template_id: id })
       router.push(`/templates/${newId}/edit`)
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Clone failed")
