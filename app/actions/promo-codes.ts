@@ -28,6 +28,11 @@ export async function redeemPromoCode(
       return { success: false, error: "Invalid promo code." }
     }
 
+    // Check if enabled
+    if (!promoCode.enabled) {
+      return { success: false, error: "This promo code is no longer active." }
+    }
+
     // Check expiry
     if (new Date() > promoCode.expiresAt) {
       return { success: false, error: "This promo code has expired." }

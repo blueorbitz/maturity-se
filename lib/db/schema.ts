@@ -152,6 +152,7 @@ export const promoCodes = pgTable("promo_codes", {
   id: text("id").primaryKey(),
   code: text("code").notNull().unique(),
   generations: integer("generations").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
   expiresAt: timestamp("expiresAt").notNull(),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
 })

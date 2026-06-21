@@ -53,6 +53,7 @@ export async function createPromoCode(
       id: nanoid(),
       code: normalizedCode,
       generations,
+      enabled: true,
       expiresAt,
     })
 
@@ -72,16 +73,42 @@ export async function getPromoCodes() {
       id: promoCodes.id,
       code: promoCodes.code,
       generations: promoCodes.generations,
+      enabled: promoCodes.enabled,
       expiresAt: promoCodes.expiresAt,
       createdAt: promoCodes.createdAt,
       redemptionCount: sql<number>`coalesce(count(${promoCodeRedemptions.id}), 0)`,
     })
     .from(promoCodes)
     .leftJoin(promoCodeRedemptions, eq(promoCodeRedemptions.promoCodeId, promoCodes.id))
-    .groupBy(promoCodes.id, promoCodes.code, promoCodes.generations, promoCodes.expiresAt, promoCodes.createdAt)
+    .groupBy(promoCodes.id, promoCodes.code, promoCodes.generations, promoCodes.enabled, promoCodes.expiresAt, promoCodes.createdAt)
     .orderBy(sql`${promoCodes.createdAt} desc`)
 
   return codes
+}
+
+export async function togglePromoCode(
+  id: string
+): Promise<{ success: boolean; enabled?: boolean; error?: string }> {
+  try {
+    await requireAdmin()
+
+    const [existing] = await db
+      .select({ enabled: promoCodes.enabled })
+      .from(promoCodes)
+      .where(eq(promoCodes.id, id))
+
+    if (!existing) {
+      return { success: false, error: "Promo code not found." }
+    }
+
+    const newEnabled = !existing.enabled
+    await db.update(promoCodes).set({ enabled: newEnabled }).where(eq(promoCodes.id, id))
+    revalidatePath("/admin/promo-codes")
+    return { success: true, enabled: newEnabled }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Failed to toggle promo code."
+    return { success: false, error: msg }
+  }
 }
 
 export async function deletePromoCode(

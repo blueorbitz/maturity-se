@@ -5,13 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { createPromoCode, getPromoCodes, deletePromoCode } from '@/app/actions/admin'
-import { Plus, Trash2, Ticket } from 'lucide-react'
+import { createPromoCode, getPromoCodes, togglePromoCode, deletePromoCode } from '@/app/actions/admin'
+import { Plus, ToggleLeft, ToggleRight, Trash2, Ticket } from 'lucide-react'
 
 interface PromoCodeRow {
   id: string
   code: string
   generations: number
+  enabled: boolean
   expiresAt: Date
   createdAt: Date
   redemptionCount: number | string
@@ -27,6 +28,7 @@ export function AdminPromoCodes({ initialCodes }: AdminPromoCodesProps) {
   const [generations, setGenerations] = useState(10)
   const [expiresAt, setExpiresAt] = useState('')
   const [creating, setCreating] = useState(false)
+  const [toggling, setToggling] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -50,6 +52,17 @@ export function AdminPromoCodes({ initialCodes }: AdminPromoCodesProps) {
       // Refresh list
       const updated = await getPromoCodes()
       setCodes(updated)
+    }
+  }
+
+  async function handleToggle(id: string) {
+    setToggling(id)
+    const result = await togglePromoCode(id)
+    setToggling(null)
+    if (result.error) {
+      setMessage({ type: 'error', text: result.error })
+    } else {
+      setCodes(codes.map((c) => c.id === id ? { ...c, enabled: result.enabled! } : c))
     }
   }
 
@@ -147,6 +160,7 @@ export function AdminPromoCodes({ initialCodes }: AdminPromoCodesProps) {
                   <tr className="border-b border-border/60">
                     <th className="text-left py-2 font-medium text-muted-foreground">Code</th>
                     <th className="text-left py-2 font-medium text-muted-foreground">Generations</th>
+                    <th className="text-left py-2 font-medium text-muted-foreground">Enabled</th>
                     <th className="text-left py-2 font-medium text-muted-foreground">Expires</th>
                     <th className="text-left py-2 font-medium text-muted-foreground">Redeemed</th>
                     <th className="text-right py-2 font-medium text-muted-foreground"></th>
@@ -157,20 +171,38 @@ export function AdminPromoCodes({ initialCodes }: AdminPromoCodesProps) {
                     <tr key={c.id} className="border-b border-border/30">
                       <td className="py-2 font-mono">{c.code}</td>
                       <td className="py-2">{c.generations}</td>
+                      <td className="py-2">
+                        {c.enabled ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 text-xs font-medium">Active</span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs font-medium">Disabled</span>
+                        )}
+                      </td>
                       <td className="py-2 text-muted-foreground">
                         {new Date(c.expiresAt).toLocaleDateString()}
                       </td>
                       <td className="py-2">{Number(c.redemptionCount)}</td>
                       <td className="py-2 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(c.id)}
-                          disabled={deleting === c.id}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          {deleting === c.id ? '...' : <Trash2 className="h-4 w-4" />}
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggle(c.id)}
+                            disabled={toggling === c.id}
+                            className={c.enabled ? "text-emerald-600 hover:text-emerald-700" : "text-muted-foreground hover:text-foreground"}
+                          >
+                            {toggling === c.id ? '...' : c.enabled ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(c.id)}
+                            disabled={deleting === c.id}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            {deleting === c.id ? '...' : <Trash2 className="h-4 w-4" />}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

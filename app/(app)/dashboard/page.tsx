@@ -1,17 +1,21 @@
 import { getMyTemplates } from "@/app/actions/templates"
 import { getMyAssessments } from "@/app/actions/assessments"
 import { getLlmKeyInfo } from "@/app/actions/llm-keys"
+import { auth } from "@/lib/auth"
+import { headers } from "next/headers"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { FileText, ClipboardList, Globe, AlertTriangle, ArrowRight } from "lucide-react"
+import { FileText, ClipboardList, Globe, AlertTriangle, ArrowRight, Shield } from "lucide-react"
 import { IconButton } from "@/components/ui/icon-button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 
 export default async function DashboardPage() {
+  const session = await auth.api.getSession({ headers: await headers() })
+
   const [templates, assessments, keyInfo] = await Promise.all([
     getMyTemplates(),
     getMyAssessments(),
@@ -23,17 +27,32 @@ export default async function DashboardPage() {
   const recentTemplates = templates.slice(0, 5)
   const recentAssessments = assessments.slice(0, 5)
 
+  // Check if user is admin
+  const adminEmails = process.env.ADMIN_EMAILS
+  const isAdmin = session?.user?.email && adminEmails
+    ? adminEmails.split(',').map((e) => e.trim().toLowerCase()).includes(session.user.email.toLowerCase())
+    : false
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <PageHeader
         title="Dashboard"
         description="Overview of your maturity assessments and templates"
         actions={
-          <IconButton size="sm" icon={<Plus className="h-4 w-4" />}>
-            <Link href="/templates/new" className="gap-1.5">
-              New Template
-            </Link>
-          </IconButton>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <IconButton size="sm" variant="outline" icon={<Shield className="h-4 w-4" />}>
+                <Link href="/admin/promo-codes" className="gap-1.5">
+                  Admin
+                </Link>
+              </IconButton>
+            )}
+            <IconButton size="sm" icon={<Plus className="h-4 w-4" />}>
+              <Link href="/templates/new" className="gap-1.5">
+                New Template
+              </Link>
+            </IconButton>
+          </div>
         }
       />
 
