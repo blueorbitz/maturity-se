@@ -10,6 +10,7 @@ import {
   Globe,
   ClipboardList,
   BarChart2,
+  Activity,
   Settings,
   LogOut,
   ChevronRight,
@@ -24,6 +25,7 @@ const nav = [
   { href: "/gallery", label: "Public Gallery", icon: Globe },
   { href: "/assessments", label: "Assessments", icon: ClipboardList },
   { href: "/reports", label: "Reports", icon: BarChart2 },
+  { href: "/usage", label: "Usage", icon: Activity },
 ]
 
 type User = { name: string; email: string }
