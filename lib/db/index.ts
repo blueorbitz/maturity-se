@@ -3,11 +3,11 @@ import { Pool } from 'pg'
 import { Signer } from '@aws-sdk/rds-signer'
 import * as schema from './schema'
 
-const isAWSAurora = process.env.AWS_AURORA_PGHOST && process.env.AWS_AURORA_PGUSER
+const useAWSAurora = process.env.USE_AWS_AURORA === 'true'
 
 let pool: Pool
 
-if (isAWSAurora) {
+if (useAWSAurora) {
   // AWS Aurora PostgreSQL with IAM authentication
   const signer = new Signer({
     region: process.env.AWS_AURORA_AWS_REGION!,

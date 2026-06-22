@@ -5,13 +5,13 @@ const { Signer } = require('@aws-sdk/rds-signer')
 const envFile = '.env.development.local'
 const args = process.argv.slice(2).join(' ')
 
-// Check if using AWS Aurora
-const isAWSAurora = process.env.AWS_AURORA_PGHOST && process.env.AWS_AURORA_PGUSER
+// Check if using AWS Aurora (manual toggle via USE_AWS_AURORA)
+const useAWSAurora = process.env.USE_AWS_AURORA === 'true'
 
 let command = args
 let env = { ...process.env }
 
-if (isAWSAurora) {
+if (useAWSAurora) {
   // Generate IAM auth token for AWS Aurora
   const signer = new Signer({
     region: process.env.AWS_AURORA_AWS_REGION,
