@@ -3,28 +3,28 @@ import { Pool } from 'pg'
 import { Signer } from '@aws-sdk/rds-signer'
 import * as schema from './schema'
 
-const isAWSAurora = process.env.AWS_REGION && process.env.RDS_HOSTNAME
+const isAWSAurora = process.env.AWS_AURORA_PGHOST && process.env.AWS_AURORA_PGUSER
 
 let pool: Pool
 
 if (isAWSAurora) {
   // AWS Aurora PostgreSQL with IAM authentication
   const signer = new Signer({
-    region: process.env.AWS_REGION!,
-    hostname: process.env.RDS_HOSTNAME!,
-    port: Number(process.env.RDS_PORT || 5432),
-    username: process.env.RDS_USERNAME!,
+    region: process.env.AWS_AURORA_AWS_REGION!,
+    hostname: process.env.AWS_AURORA_PGHOST!,
+    port: Number(process.env.AWS_AURORA_PGPORT || 5432),
+    username: process.env.AWS_AURORA_PGUSER!,
   })
 
   pool = new Pool({
-    host: process.env.RDS_HOSTNAME,
-    port: Number(process.env.RDS_PORT || 5432),
-    database: process.env.RDS_DATABASE,
-    user: process.env.RDS_USERNAME,
+    host: process.env.AWS_AURORA_PGHOST,
+    port: Number(process.env.AWS_AURORA_PGPORT || 5432),
+    database: process.env.AWS_AURORA_PGDATABASE,
+    user: process.env.AWS_AURORA_PGUSER,
     password: signer.getAuthToken({
-      username: process.env.RDS_USERNAME!,
+      username: process.env.AWS_AURORA_PGUSER!,
     }),
-    ssl: 'require',
+    ssl: process.env.AWS_AURORA_PGSSLMODE === 'require' ? 'require' : true,
   })
 } else {
   // Standard PostgreSQL connection (Neon or local)

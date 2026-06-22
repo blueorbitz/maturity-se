@@ -6,7 +6,7 @@ const envFile = '.env.development.local'
 const args = process.argv.slice(2).join(' ')
 
 // Check if using AWS Aurora
-const isAWSAurora = process.env.AWS_REGION && process.env.RDS_HOSTNAME
+const isAWSAurora = process.env.AWS_AURORA_PGHOST && process.env.AWS_AURORA_PGUSER
 
 let command = args
 let env = { ...process.env }
@@ -14,18 +14,18 @@ let env = { ...process.env }
 if (isAWSAurora) {
   // Generate IAM auth token for AWS Aurora
   const signer = new Signer({
-    region: process.env.AWS_REGION,
-    hostname: process.env.RDS_HOSTNAME,
-    port: Number(process.env.RDS_PORT || 5432),
-    username: process.env.RDS_USERNAME,
+    region: process.env.AWS_AURORA_AWS_REGION,
+    hostname: process.env.AWS_AURORA_PGHOST,
+    port: Number(process.env.AWS_AURORA_PGPORT || 5432),
+    username: process.env.AWS_AURORA_PGUSER,
   })
 
   const authToken = signer.getAuthToken({
-    username: process.env.RDS_USERNAME,
+    username: process.env.AWS_AURORA_PGUSER,
   })
 
   // Construct connection string for dbmate with IAM auth
-  env.DATABASE_URL = `postgresql://${process.env.RDS_USERNAME}:${authToken}@${process.env.RDS_HOSTNAME}:${process.env.RDS_PORT || 5432}/${process.env.RDS_DATABASE}?sslmode=require`
+  env.DATABASE_URL = `postgresql://${process.env.AWS_AURORA_PGUSER}:${authToken}@${process.env.AWS_AURORA_PGHOST}:${process.env.AWS_AURORA_PGPORT || 5432}/${process.env.AWS_AURORA_PGDATABASE}?sslmode=${process.env.AWS_AURORA_PGSSLMODE || 'require'}`
 }
 
 if (fs.existsSync(envFile)) {
