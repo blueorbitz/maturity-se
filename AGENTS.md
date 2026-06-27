@@ -9,6 +9,7 @@
 - Database migrations: `pnpm db:migrate` (dbmate, reads `DATABASE_URL` from env)
 - Production deploys run `pnpm build` which chains `dbmate up` automatically
 - Locally, `db/run.js` loads `.env.development.local` via dotenv-cli
+- No need to update `next-env.d.ts` to switch between dev or prod.
 
 ## Conventions
 

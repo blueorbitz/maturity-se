@@ -38,6 +38,12 @@ Copy `.env.example` to `.env.development.local` and fill in the values:
    pnpm dev
    ```
 
+4. To update env from vercel
+   ```bash
+   vercel link
+   vercel env pull .env.development.local
+   ```
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
