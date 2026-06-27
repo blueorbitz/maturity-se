@@ -92,7 +92,7 @@ export async function getLlmKeyInfo() {
   const envSecretKey = process.env.AWS_SECRET_ACCESS_KEY
   
   if (envAccessKey && envSecretKey) {
-    console.log("[v0] Using AWS credentials from environment variables")
+    const encryptedKey = await encrypt(envSecretKey)
     return {
       provider: "bedrock",
       keyHint: `${envAccessKey.slice(0, 4)}...${envAccessKey.slice(-4)} (from ENV)`,
@@ -100,7 +100,7 @@ export async function getLlmKeyInfo() {
       apiFormat: "openai",
       awsRegion: "us-east-1",
       awsAccessKeyId: envAccessKey,
-      encryptedKey: envSecretKey, // Store plain secret; callBedrock will detect it
+      encryptedKey,
       updatedAt: new Date(),
     }
   }

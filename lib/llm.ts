@@ -119,9 +119,7 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
   try {
     secretKey = await decrypt(keyRecord.encryptedKey)
   } catch {
-    // If decryption fails, it might be a plain text key (from ENV)
-    console.log("[v0] Decryption failed, using key as-is (likely from ENV)")
-    secretKey = keyRecord.encryptedKey
+    throw new Error("Failed to decrypt AWS Secret Access Key. Your key may be corrupted. Please re-enter your credentials in Settings.")
   }
 
   if (!accessKeyId) {
