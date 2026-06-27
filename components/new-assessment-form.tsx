@@ -64,8 +64,13 @@ export function NewAssessmentForm({ templates, defaultTemplateId }: Props) {
               </p>
             ) : (
               <Select value={templateId} onValueChange={setTemplateId}>
-                <SelectTrigger id="template">
-                  <SelectValue placeholder="Select a template" />
+                <SelectTrigger id="template" className="w-full">
+                  <SelectValue placeholder="Select a template">
+                    {(value) => {
+                      const t = templates.find((tpl) => tpl.id === value)
+                      return t ? `${t.title} (${t.topic})` : 'Select a template'
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {templates.map((t) => (
