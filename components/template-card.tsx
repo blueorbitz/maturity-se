@@ -85,10 +85,8 @@ export function TemplateCard({ template, showActions = false, onClone }: Templat
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <Link href={`/templates/${template.id}/edit`}>
-                    <Pencil className="h-4 w-4 mr-2" /> Edit
-                  </Link>
+                <DropdownMenuItem onClick={() => router.push(`/templates/${template.id}/edit`)}>
+                  <Pencil className="h-4 w-4 mr-2" /> Edit
                 </DropdownMenuItem>
                 {template.visibility === "public" ? (
                   <DropdownMenuItem onClick={handleToggleVisibility}>
