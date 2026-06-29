@@ -33,6 +33,8 @@
 **Script**:
 > "Engineering teams don't know where they stand. They run retros, hire consultants, fill out maturity models — and nothing changes. Because maturity assessments today are static PDFs, gut feelings, and spreadsheets nobody updates twice."
 
+> Engineering teams don't know where they stand. Maturity models such as UX Maturity or DevOps Maturity are an example of how they depends on existing maturity model assessments. Assessment are usually a series of questions translate into a maturity profile.
+
 **Text overlay**: "Engineering maturity is broken."
 
 ---
@@ -45,6 +47,8 @@
 
 **Script**:
 > "Maturity-SE is a B2B SaaS tool for engineering leaders who need to measure, track, and improve engineering maturity across their teams — not with a one-time consultant report, but with a living, data-driven dashboard that updates as they grow."
+
+> Maturity-SE is a B2B SaaS tool for engineering leaders who need to measure, track, and improve engineering maturity across their teams. Simplifiying hours of research, rolling out the questionnaires, curate response and get insights of how their team is progressing.
 
 **Text overlay**: "For engineering leaders who want to know where they actually stand."
 
