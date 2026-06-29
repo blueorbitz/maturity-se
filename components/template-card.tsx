@@ -29,6 +29,7 @@ type Template = {
   clonedFromId: string | null
   domains: Array<{ id: string; name: string; questions: unknown[] }>
   updatedAt: Date
+  authorName?: string | null
 }
 
 interface TemplateCardProps {
@@ -89,11 +90,23 @@ export function TemplateCard({ template, showActions = false, onClone }: Templat
                     <Pencil className="h-4 w-4 mr-2" /> Edit
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleToggleVisibility}>
-                  {template.visibility === "public"
-                    ? <><Lock className="h-4 w-4 mr-2" /> Make private</>
-                    : <><Globe className="h-4 w-4 mr-2" /> Make public</>}
-                </DropdownMenuItem>
+                {template.visibility === "public" ? (
+                  <DropdownMenuItem onClick={handleToggleVisibility}>
+                    <Lock className="h-4 w-4 mr-2" /> Make private
+                  </DropdownMenuItem>
+                ) : template.clonedFromId ? (
+                  <DropdownMenuItem
+                    disabled
+                    className="opacity-50 cursor-not-allowed"
+                    title="Cloned templates cannot be made public"
+                  >
+                    <Globe className="h-4 w-4 mr-2" /> Make public
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={handleToggleVisibility}>
+                    <Globe className="h-4 w-4 mr-2" /> Make public
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleDelete}
@@ -116,7 +129,10 @@ export function TemplateCard({ template, showActions = false, onClone }: Templat
             {template.title}
           </h3>
         </Link>
-        <p className="text-xs text-muted-foreground">{template.topic}</p>
+        <p className="text-xs text-muted-foreground">
+          {template.topic}
+          {template.authorName && ` · by ${template.authorName}`}
+        </p>
       </CardContent>
 
       <CardFooter className="px-4 py-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">

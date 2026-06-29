@@ -2,7 +2,7 @@
 
 import { getUserId } from "@/lib/auth-helpers"
 import { db } from "@/lib/db"
-import { llmKeys, templates, llmUsageLog } from "@/lib/db/schema"
+import { llmKeys, templates, llmUsageLog, user } from "@/lib/db/schema"
 import type { Domain, ScaleLevel, Visibility } from "@/lib/db/schema"
 import { callLlm, callLlmWithPlatformCredentials, getPlatformLlmModel } from "@/lib/llm"
 import { sanitizeForLlm, clampInt } from "@/lib/sanitize"
@@ -265,11 +265,33 @@ export async function getTemplateById(id: string) {
 }
 
 export async function getPublicTemplates() {
-  return db
-    .select()
+  const results = await db
+    .select({
+      id: templates.id,
+      userId: templates.userId,
+      title: templates.title,
+      topic: templates.topic,
+      context: templates.context,
+      targetAudience: templates.targetAudience,
+      scaleLength: templates.scaleLength,
+      scaleLevels: templates.scaleLevels,
+      domains: templates.domains,
+      visibility: templates.visibility,
+      clonedFromId: templates.clonedFromId,
+      generatedByAi: templates.generatedByAi,
+      createdAt: templates.createdAt,
+      updatedAt: templates.updatedAt,
+      authorName: user.name,
+    })
     .from(templates)
+    .leftJoin(user, eq(templates.userId, user.id))
     .where(eq(templates.visibility, "public"))
     .orderBy(desc(templates.updatedAt))
+
+  return results.map((r) => ({
+    ...r,
+    authorName: r.authorName || null,
+  }))
 }
 
 export async function cloneTemplate(sourceId: string) {
@@ -307,6 +329,17 @@ export async function cloneTemplate(sourceId: string) {
 
 export async function updateTemplateVisibility(id: string, visibility: Visibility) {
   const userId = await getUserId()
+
+  const [template] = await db
+    .select({ clonedFromId: templates.clonedFromId })
+    .from(templates)
+    .where(and(eq(templates.id, id), eq(templates.userId, userId)))
+
+  if (!template) throw new Error("Template not found")
+  if (template.clonedFromId && visibility === "public") {
+    throw new Error("Cloned templates cannot be made public")
+  }
+
   await db
     .update(templates)
     .set({ visibility, updatedAt: new Date() })
