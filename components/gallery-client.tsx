@@ -20,6 +20,7 @@ type Template = {
   clonedFromId: string | null
   domains: Array<{ id: string; name: string; questions: unknown[] }>
   updatedAt: Date
+  authorName?: string | null
 }
 
 const ALL = "All"
