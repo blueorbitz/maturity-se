@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { generateTemplate, saveTemplate } from "@/app/actions/templates"
+import { searchWeb, summarizePages, reasonAboutTopic } from "@/app/actions/research"
 import { getMyCredits } from "@/app/actions/promo-codes"
 import posthog from "posthog-js"
 import { Button } from "@/components/ui/button"
@@ -11,8 +12,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
-import { Loader2, Sparkles, PenLine, Key, Zap, Check } from "lucide-react"
+import { Loader2, Sparkles, PenLine, Key, Zap, Check, Globe, BrainCircuit } from "lucide-react"
 import { TemplateEditor } from "@/components/template-editor"
+import { ResearchBriefSection } from "@/components/research-brief-section"
 import type { Domain, ScaleLevel } from "@/lib/db/schema"
 import { nanoid } from "nanoid"
 
@@ -64,6 +66,12 @@ export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRema
   const [draft, setDraft] = useState<DraftTemplate | null>(null)
   const [usePlatformCredits, setUsePlatformCredits] = useState(defaultLlmMode === 'platform_credits')
 
+  const [webResearch, setWebResearch] = useState(false)
+  const [deepReasoning, setDeepReasoning] = useState(false)
+  const [progressLabel, setProgressLabel] = useState<string | null>(null)
+  const [researchWarning, setResearchWarning] = useState<string | null>(null)
+  const [researchBrief, setResearchBrief] = useState<string | null>(null)
+
   const [title, setTitle] = useState("")
   const [topic, setTopic] = useState("")
   const [customTopic, setCustomTopic] = useState("")
@@ -79,10 +87,64 @@ export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRema
   const canUsePlatformCredits = platformCreditsRemaining > 0
   const canGenerate = canUseOwnKey || canUsePlatformCredits
 
+  const creditCost = 1 + (webResearch ? 1 : 0) + (deepReasoning ? 1 : 0)
+
   async function handleGenerate() {
     setError(null)
+    setResearchWarning(null)
+    setResearchBrief(null)
     setGenerating(true)
+
+    let pendingBrief: string | null = null
+    let webOk = false
+    let deepOk = false
+
     try {
+      if (webResearch) {
+        try {
+          setProgressLabel("Searching the web...")
+          const results = await searchWeb(effectiveTopic)
+          if (results.length === 0) throw new Error("no results")
+
+          setProgressLabel("Summarizing findings...")
+          const contents = results.map((r) => r.content)
+          pendingBrief = await summarizePages(contents, effectiveTopic, usePlatformCredits)
+          setResearchBrief(pendingBrief)
+          webOk = true
+        } catch (webErr) {
+          console.error('[webResearch] Failed:', webErr instanceof Error ? webErr.message : webErr)
+          // Web research degraded — continue with whatever succeeded
+        }
+      }
+
+      if (deepReasoning) {
+        try {
+          setProgressLabel("Reasoning about frameworks...")
+          pendingBrief = await reasonAboutTopic({
+            topic: effectiveTopic,
+            context: context || undefined,
+            targetAudience: effectiveAudience,
+            summary: pendingBrief ?? undefined,
+            usePlatformCredits,
+          })
+          setResearchBrief(pendingBrief)
+          deepOk = true
+        } catch {
+          // Reasoning degraded — fall back to web summary or no brief
+        }
+      }
+
+      if ((webResearch && !webOk) || (deepReasoning && !deepOk)) {
+        if (pendingBrief) {
+          setResearchWarning(webResearch && !webOk && deepOk
+            ? "Web research unavailable; generated using AI reasoning only."
+            : "Some research steps were unavailable; generated with reduced research.")
+        } else {
+          setResearchWarning("Research unavailable; generated without research.")
+        }
+      }
+
+      setProgressLabel("Generating template...")
       const result = await generateTemplate({
         title,
         topic: effectiveTopic,
@@ -90,6 +152,7 @@ export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRema
         targetAudience: effectiveAudience,
         scaleLength: SCALE_LENGTH,
         usePlatformCredits,
+        researchBrief: pendingBrief ?? undefined,
       })
       if (!result.success) {
         setError(result.error)
@@ -102,11 +165,16 @@ export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRema
         onCreditsChanged?.(credits.remaining)
       }
 
-      posthog.capture('template_ai_generated', { prompt_length: (context || '').length })
+      posthog.capture('template_ai_generated', {
+        prompt_length: (context || '').length,
+        web_research: webResearch,
+        deep_reasoning: deepReasoning,
+      })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Generation failed")
     } finally {
       setGenerating(false)
+      setProgressLabel(null)
     }
   }
 
@@ -150,6 +218,7 @@ export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRema
         domains: updated.domains,
         visibility: "private",
         generatedByAi: updated.generatedByAi,
+        researchBrief,
       })
       posthog.capture('template_created', { generated_by_ai: updated.generatedByAi })
       router.push(`/templates/${id}`)
@@ -164,13 +233,16 @@ export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRema
 
   if (draft) {
     return (
-      <TemplateEditor
-        initialData={draft}
-        onSave={handleSave}
-        onBack={() => setDraft(null)}
-        saving={saving}
-        error={error}
-      />
+      <div className="space-y-4">
+        <ResearchBriefSection researchBrief={researchBrief} />
+        <TemplateEditor
+          initialData={draft}
+          onSave={handleSave}
+          onBack={() => setDraft(null)}
+          saving={saving}
+          error={error}
+        />
+      </div>
     )
   }
 
@@ -255,9 +327,73 @@ export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRema
           <p className="text-xs text-muted-foreground">{context.length}/2000</p>
         </div>
 
+        {researchWarning && (
+          <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-md">
+            {researchWarning}
+          </p>
+        )}
+
+        <ResearchBriefSection researchBrief={researchBrief} />
+
         {error && (
           <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
         )}
+
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">AI Research (optional, extra credits)</Label>
+          <div className="space-y-2">
+            <label className={`flex items-start gap-2.5 rounded-lg border border-border p-3 cursor-pointer transition-colors ${webResearch ? 'border-primary bg-primary/5' : 'hover:bg-muted/40'} ${generating ? 'opacity-50 pointer-events-none' : ''}`}>
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={webResearch}
+                onChange={(e) => setWebResearch(e.target.checked)}
+                disabled={generating}
+              />
+              <span className={`mt-0.5 w-4 h-4 shrink-0 rounded border flex items-center justify-center ${
+                webResearch ? 'bg-primary border-primary text-primary-foreground' : 'border-input'
+              }`}>
+                {webResearch && <Check className="h-3 w-3" />}
+              </span>
+              <span className="flex-1">
+                <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                  <Globe className="h-3.5 w-3.5" /> Web Research
+                </span>
+                <span className="block text-xs text-muted-foreground mt-0.5">
+                  Searches, fetches, and summarizes current web sources for the topic (+1 credit).
+                </span>
+              </span>
+            </label>
+
+            <label className={`flex items-start gap-2.5 rounded-lg border border-border p-3 cursor-pointer transition-colors ${
+              deepReasoning ? 'border-primary bg-primary/5' : 'hover:bg-muted/40'
+            } ${generating ? 'opacity-50 pointer-events-none' : ''}`}>
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={deepReasoning}
+                onChange={(e) => setDeepReasoning(e.target.checked)}
+                disabled={generating}
+              />
+              <span className={`mt-0.5 w-4 h-4 shrink-0 rounded border flex items-center justify-center ${
+                deepReasoning ? 'bg-primary border-primary text-primary-foreground' : 'border-input'
+              }`}>
+                {deepReasoning && <Check className="h-3 w-3" />}
+              </span>
+              <span className="flex-1">
+                <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                  <BrainCircuit className="h-3.5 w-3.5" /> Deep Reasoning
+                </span>
+                <span className="block text-xs text-muted-foreground mt-0.5">
+                  Reason about which maturity frameworks and dimensions apply (+1 credit).
+                </span>
+              </span>
+            </label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Estimated cost: <span className="font-medium text-foreground">{creditCost} credit{creditCost > 1 ? "s" : ""}</span>
+          </p>
+        </div>
 
         {canGenerate && canUseOwnKey && canUsePlatformCredits && (
           <div className="space-y-1.5">
@@ -301,7 +437,7 @@ export function NewTemplateForm({ hasLlmKey, defaultLlmMode, platformCreditsRema
               className="flex-1"
             >
               {generating
-                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating...</>
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {progressLabel ?? "Generating..."}</>
                 : <><Sparkles className="h-4 w-4 mr-2" /> Generate with AI</>}
             </Button>
           ) : (

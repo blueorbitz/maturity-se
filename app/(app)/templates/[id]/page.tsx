@@ -9,6 +9,7 @@ import { IconButton } from "@/components/ui/icon-button"
 import { Pencil, ClipboardList } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
+import { ResearchBriefSection } from "@/components/research-brief-section"
 
 export default async function TemplateDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -64,6 +65,9 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
           Updated {formatDistanceToNow(template.updatedAt, { addSuffix: true })}
         </span>
       </div>
+
+      {/* Research brief */}
+      <ResearchBriefSection researchBrief={template.researchBrief} className="mb-6" />
 
       {/* Scale */}
       <Card className="mb-6">
