@@ -77,8 +77,11 @@ export function AssessmentCard({ assessment }: { assessment: Assessment }) {
           </IconButton>
 
           <DropdownMenu>
-            <DropdownMenuTrigger>
-              <IconButton size="sm" variant="ghost" icon={<MoreHorizontal className="h-4 w-4" />} disabled={loading} />
+            <DropdownMenuTrigger
+              className="inline-flex items-center justify-center gap-1.5 rounded-md h-8 w-8 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background"
+              disabled={loading}
+            >
+              <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={copyInviteLink}>

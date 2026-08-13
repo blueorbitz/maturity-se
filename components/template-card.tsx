@@ -78,11 +78,12 @@ export function TemplateCard({ template, showActions = false, onClone }: Templat
           </div>
           {showActions && (
             <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" disabled={loading}>
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Actions</span>
-                </Button>
+              <DropdownMenuTrigger
+                className="inline-flex items-center justify-center rounded-md h-7 w-7 shrink-0 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background"
+                disabled={loading}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Actions</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => router.push(`/templates/${template.id}/edit`)}>

@@ -30,3 +30,17 @@ export function clampInt(value: unknown, min: number, max: number, fallback: num
   if (!Number.isInteger(n)) return fallback
   return Math.min(max, Math.max(min, n))
 }
+
+/**
+ * Strips chain-of-thought / reasoning tags from LLM responses.
+ * Models like Minimax wrap their internal reasoning in <reasoning>...</reasoning>,
+ * <thinking>...</thinking>, or similar tags before the actual output.
+ */
+export function stripReasoningTags(raw: string): string {
+  return raw
+    .replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '')
+    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+    .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+    .replace(/<chain_of_thought>[\s\S]*?<\/chain_of_thought>/gi, '')
+    .trim()
+}

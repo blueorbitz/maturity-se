@@ -21,6 +21,7 @@ Copy `.env.example` to `.env.development.local` and fill in the values:
 | `AWS_SECRET_ACCESS_KEY` | ❌ | AWS Secret Access Key for Bedrock |
 | `PLATFORM_LLM_REGION` | ❌ | AWS region for platform Bedrock calls (default: `us-east-1`) |
 | `PLATFORM_LLM_MODEL` | ❌ | Bedrock model ID for platform calls (default: `minimax.minimax-m2.5`) |
+| `TAVILY_API_KEY` | ❌ | Tavily API key for web research feature. Get one at [tavily.com](https://tavily.com) |
 | `BETTER_AUTH_URL` | ❌ | Override base URL for auth callbacks. Normally auto-detected from Vercel env vars |
 
 ## Getting Started

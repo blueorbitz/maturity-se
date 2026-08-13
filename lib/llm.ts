@@ -21,14 +21,15 @@ export type LlmKeyRecord = {
  */
 export async function callLlm(
   keyRecord: LlmKeyRecord,
-  prompt: string
+  prompt: string,
+  maxTokens = 4096
 ): Promise<string> {
   if (keyRecord.provider === "openai") {
     const model = keyRecord.model?.trim() || "gpt-4o-mini"
-    return callOpenAi(keyRecord.encryptedKey, prompt, model)
+    return callOpenAi(keyRecord.encryptedKey, prompt, model, maxTokens)
   }
   if (keyRecord.provider === "bedrock") {
-    return callBedrock(keyRecord, prompt)
+    return callBedrock(keyRecord, prompt, maxTokens)
   }
   throw new Error(`Unsupported provider: ${keyRecord.provider}`)
 }
@@ -37,7 +38,7 @@ export async function callLlm(
  * Calls LLM using platform-provided AWS credentials from environment variables.
  * Throws if env vars are missing.
  */
-export async function callLlmWithPlatformCredentials(prompt: string): Promise<string> {
+export async function callLlmWithPlatformCredentials(prompt: string, maxTokens = 4096): Promise<string> {
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
   const region = process.env.PLATFORM_LLM_REGION || "us-east-1"
@@ -55,7 +56,7 @@ export async function callLlmWithPlatformCredentials(prompt: string): Promise<st
   // Platform uses OpenAI format by default (Minimax models)
   const requestBody = JSON.stringify({
     messages: [{ role: "user", content: prompt }],
-    max_tokens: 4096,
+    max_tokens: maxTokens,
   })
 
   const command = new InvokeModelCommand({
@@ -84,7 +85,7 @@ export function getPlatformLlmModel(): string {
   return process.env.PLATFORM_LLM_MODEL || "minimax.minimax-m2.5"
 }
 
-async function callOpenAi(encryptedKey: string, prompt: string, model: string): Promise<string> {
+async function callOpenAi(encryptedKey: string, prompt: string, model: string, maxTokens = 4096): Promise<string> {
   const apiKey = await decrypt(encryptedKey)
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -97,7 +98,7 @@ async function callOpenAi(encryptedKey: string, prompt: string, model: string): 
       model,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
-      max_tokens: 4096,
+      max_tokens: maxTokens,
     }),
   })
 
@@ -110,7 +111,7 @@ async function callOpenAi(encryptedKey: string, prompt: string, model: string): 
   return data.choices?.[0]?.message?.content ?? ""
 }
 
-async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<string> {
+async function callBedrock(keyRecord: LlmKeyRecord, prompt: string, maxTokens = 4096): Promise<string> {
   const region = keyRecord.awsRegion ?? "us-east-1"
   const accessKeyId = keyRecord.awsAccessKeyId ?? ""
   
@@ -146,13 +147,13 @@ async function callBedrock(keyRecord: LlmKeyRecord, prompt: string): Promise<str
     // OpenAI format (used by models like Minimax)
     requestBody = JSON.stringify({
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 4096,
+      max_tokens: maxTokens,
     })
   } else {
     // Anthropic format (used by Claude, etc.)
     requestBody = JSON.stringify({
       anthropic_version: "bedrock-2023-05-31",
-      max_tokens: 4096,
+      max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }],
     })
   }

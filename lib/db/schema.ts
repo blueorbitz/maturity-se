@@ -98,6 +98,7 @@ export const templates = pgTable("templates", {
   visibility: text("visibility").notNull().default("private").$type<Visibility>(),
   clonedFromId: text("clonedFromId"),
   generatedByAi: boolean("generatedByAi").notNull().default(false),
+  researchBrief: text("researchBrief"),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 })

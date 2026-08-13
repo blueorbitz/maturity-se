@@ -5,12 +5,74 @@ import { db } from "@/lib/db"
 import { llmKeys, templates, llmUsageLog, user } from "@/lib/db/schema"
 import type { Domain, ScaleLevel, Visibility } from "@/lib/db/schema"
 import { callLlm, callLlmWithPlatformCredentials, getPlatformLlmModel } from "@/lib/llm"
-import { sanitizeForLlm, clampInt } from "@/lib/sanitize"
+import { sanitizeForLlm, clampInt, stripReasoningTags } from "@/lib/sanitize"
 import { and, desc, eq, or } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getMyCredits } from "./promo-codes"
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Extracts the first balanced top-level JSON object from a string.
+ * Walks character by character tracking brace depth, handling strings properly.
+ * Returns the JSON substring or null if none found.
+ */
+function extractFirstJsonObject(text: string): string | null {
+  let start = -1
+  let depth = 0
+  let inString = false
+  let escape = false
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+
+    if (escape) { escape = false; continue }
+    if (ch === '\\' && inString) { escape = true; continue }
+    if (ch === '"' && !escape) { inString = !inString; continue }
+    if (inString) continue
+
+    if (ch === '{') {
+      if (depth === 0) start = i
+      depth++
+    } else if (ch === '}') {
+      depth--
+      if (depth === 0 && start !== -1) {
+        return text.substring(start, i + 1)
+      }
+    }
+  }
+
+  // If we have an unclosed object (truncated output), try to repair it
+  if (start !== -1 && depth > 0) {
+    let partial = text.substring(start)
+    // Remove any trailing incomplete string value
+    partial = partial.replace(/,\s*"[^"]*":\s*"[^"]*$/, '')
+    partial = partial.replace(/,\s*"[^"]*":\s*$/, '')
+    partial = partial.replace(/,\s*$/, '')
+    // Close remaining brackets/braces
+    let openBraces = 0
+    let openBrackets = 0
+    let pInString = false
+    let pEscape = false
+    for (const c of partial) {
+      if (pEscape) { pEscape = false; continue }
+      if (c === '\\' && pInString) { pEscape = true; continue }
+      if (c === '"') { pInString = !pInString; continue }
+      if (pInString) continue
+      if (c === '{') openBraces++
+      else if (c === '}') openBraces--
+      else if (c === '[') openBrackets++
+      else if (c === ']') openBrackets--
+    }
+    while (openBrackets > 0) { partial += ']'; openBrackets-- }
+    while (openBraces > 0) { partial += '}'; openBraces-- }
+    return partial
+  }
+
+  return null
+}
 
 // ─── Zod schemas ─────────────────────────────────────────────────────────────
 
@@ -20,6 +82,7 @@ const GenerateSchema = z.object({
   context: z.string().max(2000).optional(),
   targetAudience: z.string().min(1).max(200),
   scaleLength: z.number().int().min(2).max(10).default(5),
+  researchBrief: z.string().max(20000).optional(),
 })
 
 const SaveTemplateSchema = z.object({
@@ -38,6 +101,7 @@ const SaveTemplateSchema = z.object({
   visibility: z.enum(["private", "public"]).default("private"),
   generatedByAi: z.boolean().default(false),
   clonedFromId: z.string().optional().nullable(),
+  researchBrief: z.string().optional().nullable(),
 })
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -49,6 +113,7 @@ export async function generateTemplate(formData: {
   targetAudience: string
   scaleLength: number
   usePlatformCredits?: boolean
+  researchBrief?: string
 }): Promise<{ success: true; data: { title: string; topic: string; context?: string; targetAudience: string; scaleLength: number; scaleLevels: ScaleLevel[]; domains: Domain[] } } | { success: false; error: string }> {
   try {
     const userId = await getUserId()
@@ -63,6 +128,7 @@ export async function generateTemplate(formData: {
     const targetAudience = sanitizeForLlm(data.targetAudience)
     const scaleLength = clampInt(data.scaleLength, 2, 10, 5)
     const usePlatformCredits = formData.usePlatformCredits ?? false
+    const researchBrief = data.researchBrief ? data.researchBrief.trim().slice(0, 20000) : ""
 
     let provider: string
     let model: string | null = null
@@ -85,6 +151,17 @@ export async function generateTemplate(formData: {
 
     const scaleExamples = Array.from({ length: scaleLength }, (_, i) => `${i + 1}`).join(", ")
 
+    const researchSection = researchBrief
+      ? `\nResearch brief (ground your output in these findings):\n${researchBrief}
+
+Research grounding rules:
+- Map each domain to a specific framework, standard, or model identified in the research brief.
+- Ensure the questions measure the specific practices and capabilities mentioned in the brief.
+- Prefer dimensions and practices from the brief over generic categories when they fit ${topic}.
+- Do not invent domains or questions that conflict with the brief.`
+
+      : ""
+
     const prompt = `You are a software engineering maturity assessment expert.
 
 Generate a comprehensive maturity assessment template with the following specification:
@@ -93,7 +170,7 @@ Generate a comprehensive maturity assessment template with the following specifi
 - Context/Scope: ${context || "General software engineering team"}
 - Target Audience: ${targetAudience}
 - Maturity Scale: ${scaleLength} levels (${scaleExamples})
-
+${researchSection}
 Return a JSON object with EXACTLY this structure (no markdown, no code fences, raw JSON only):
 {
   "scaleLevels": [
@@ -123,11 +200,11 @@ Rules:
     let raw: string
 
     if (usePlatformCredits) {
-      raw = await callLlmWithPlatformCredentials(prompt)
+      raw = await callLlmWithPlatformCredentials(prompt, 8192)
     } else {
       const [keyRecord] = await db.select().from(llmKeys).where(eq(llmKeys.userId, userId))
       if (!keyRecord) return { success: false, error: "No LLM API key configured. Please add one in Settings." }
-      raw = await callLlm(keyRecord, prompt)
+      raw = await callLlm(keyRecord, prompt, 8192)
     }
 
     // Log LLM usage
@@ -140,15 +217,19 @@ Rules:
     })
 
     // Extract JSON from response (strip any accidental markdown fences or prose)
-    // Match the outermost JSON object: find first { and last }
-    const firstBrace = raw.indexOf('{')
-    const lastBrace = raw.lastIndexOf('}')
-    
-    if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+    // First strip model reasoning/thinking tags
+    let cleaned = stripReasoningTags(raw)
+    // Strip markdown code fences if present
+    cleaned = cleaned.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '')
+    cleaned = cleaned.trim()
+
+    // Find the first complete balanced JSON object
+    const jsonStr = extractFirstJsonObject(cleaned)
+
+    if (!jsonStr) {
+      console.error('[generateTemplate] No valid JSON object found in LLM response. Raw length:', raw.length, 'Cleaned length:', cleaned.length, 'First 300 chars:', cleaned.slice(0, 300))
       return { success: false, error: "LLM returned an unexpected response format. Please try again." }
     }
-    
-    const jsonStr = raw.substring(firstBrace, lastBrace + 1)
 
     let parsed2: { scaleLevels: ScaleLevel[]; domains: Domain[] }
     try {
@@ -156,7 +237,8 @@ Rules:
         scaleLevels: ScaleLevel[]
         domains: Domain[]
       }
-    } catch {
+    } catch (parseErr) {
+      console.error('[generateTemplate] JSON parse failed. Raw length:', raw.length, 'Extracted length:', jsonStr.length, 'Error:', parseErr)
       return { success: false, error: "LLM returned invalid JSON. Please try again." }
     }
 
@@ -199,8 +281,7 @@ export async function saveTemplate(formData: z.infer<typeof SaveTemplateSchema>)
       .where(and(eq(templates.id, data.id), eq(templates.userId, userId)))
     if (!existing) throw new Error("Template not found")
 
-    await db
-      .update(templates)
+    await db.update(templates)
       .set({
         title: data.title,
         topic: data.topic,
@@ -211,6 +292,9 @@ export async function saveTemplate(formData: z.infer<typeof SaveTemplateSchema>)
         domains: data.domains,
         visibility: data.visibility,
         updatedAt: now,
+        ...(data.researchBrief !== undefined && data.researchBrief !== null
+          ? { researchBrief: data.researchBrief }
+          : {}),
       })
       .where(and(eq(templates.id, data.id), eq(templates.userId, userId)))
 
@@ -233,6 +317,7 @@ export async function saveTemplate(formData: z.infer<typeof SaveTemplateSchema>)
     visibility: data.visibility,
     generatedByAi: data.generatedByAi,
     clonedFromId: data.clonedFromId ?? null,
+    researchBrief: data.researchBrief ?? null,
     createdAt: now,
     updatedAt: now,
   })

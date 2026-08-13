@@ -16,6 +16,7 @@
     "@aws-sdk/client-bedrock-runtime": "^3.1073.0",
     "@aws-sdk/rds-signer": "^3.1073.0",
     "@base-ui/react": "^1.5.0",
+    "@tavily/core": "^0.7.7",
     "@vercel/analytics": "1.6.1",
     "@vercel/functions": "^3.7.2",
     "better-auth": "^1.6.20",
