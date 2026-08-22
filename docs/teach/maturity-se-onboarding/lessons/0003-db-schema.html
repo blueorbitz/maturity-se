@@ -1,0 +1,226 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 3 - DB Schema: The Four Tables</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="topbar"><div class="shell topbar-inner">
+  <div class="brand">Maturity-SE Onboarding <small>Lesson 3 of 5</small></div>
+  <nav class="nav-links">
+    <a href="../reference/glossary.html">Glossary</a>
+    <a href="0001-repo-map.html">L1</a>
+    <a href="0002-local-run.html">L2</a>
+    <a href="#quiz">Quiz</a>
+    <a href="0004-auth-guards.html">L4</a>
+  </nav>
+</div></div>
+
+<div class="shell">
+  <div class="hero">
+    <div class="kicker">The Rosetta Stone of this repo</div>
+    <h1>DB Schema: the four tables you care about</h1>
+    <p>Every feature in this app is a query against four tables. Learn their shapes and you can read any server action without guessing. The schema is in <a href="../../../lib/db/schema.ts">lib/db/schema.ts</a> - 185 lines, not 1000.</p>
+    <div class="meta">
+      <span>10 min</span>
+      <span>One win: read any Drizzle query and predict what it returns</span>
+      <span><a href="../MISSION.md">Mission</a></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">The four you care about this week</div>
+    <h2>templates, assessments, responses, llm_keys</h2>
+    <p class="muted" style="font-size:14px; margin:0 0 12px">Other tables (user, session, account, promo_codes) exist but are scaffolding. These four are the product.</p>
+
+    <h3>templates - the questionnaire definition</h3>
+    <pre><code>templates
+  id: text (nanoid PK)
+  userId: text (owner)
+  title: text
+  topic: text
+  context: text (nullable - AI prompt context)
+  targetAudience: text
+  scaleLength: integer (default 5)
+  scaleLevels: jsonb ScaleLevel[] (1..5 with label + description)
+  domains: jsonb Domain[] (each has questions: Question[])
+  visibility: text (private | public)
+  clonedFromId: text (nullable - set when cloned)
+  generatedByAi: boolean
+  researchBrief: text (nullable - from research pipeline)</code></pre>
+    <div class="callout" style="margin-top:10px">
+      <strong>Key shape:</strong> ScaleLevel = { level, label, description }. Domain = { id, name, questions: Question[] }. Question = { id, text, type: scale|text }. These are the nested jsonb blobs that define the questionnaire.
+    </div>
+
+    <h3>assessments - the instance sent to a team</h3>
+    <pre><code>assessments
+  id: text (nanoid PK)
+  userId: text (owner)
+  templateId: text (FK to templates - no constraint, just reference)
+  title: text
+  description: text (nullable)
+  status: text (draft | active | closed, default draft)
+  inviteToken: text (unique - the shareable link key)
+  teamName: text (nullable)
+  dueDate: timestamp (nullable)</code></pre>
+    <div class="callout warn" style="margin-top:10px">
+      <strong>Important:</strong> templateId has no foreign key constraint. If you delete a template, assessments referencing it become orphaned. This is intentional - the assessment keeps working with its cached template data in responses.
+    </div>
+
+    <h3>responses - one person's answers</h3>
+    <pre><code>responses
+  id: text (nanoid PK)
+  assessmentId: text (FK to assessments)
+  respondentName: text (nullable)
+  respondentRole: text (nullable)
+  answers: jsonb Record&lt;questionId, number|string&gt; (default {})
+  submittedAt: timestamp</code></pre>
+    <div class="callout" style="margin-top:10px">
+      <strong>The jsonb blob:</strong> answers maps question IDs to scale values (numbers) or text responses. The report page aggregates these per domain and per question. One row = one respondent.
+    </div>
+
+    <h3>llm_keys - encrypted BYOK credentials</h3>
+    <pre><code>llm_keys
+  id: text (nanoid PK)
+  userId: text (unique - one key per user)
+  provider: text (openai | bedrock)
+  encryptedKey: text (AES-256-GCM via lib/crypto.ts)
+  keyHint: text (e.g. sk-...xxxx)
+  model: text (nullable)
+  apiFormat: text (openai | anthropic, default anthropic)
+  awsRegion: text (nullable - Bedrock only)
+  awsAccessKeyId: text (nullable - Bedrock only)
+  encryptedAwsSecretKey: text (nullable - Bedrock only)</code></pre>
+    <p class="muted" style="font-size:13px">One row per user (unique constraint on userId). Encrypted with BETTER_AUTH_SECRET via PBKDF2 + AES-GCM in lib/crypto.ts.</p>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">How Drizzle reads these</div>
+    <h2>The query pattern</h2>
+    <p style="font-size:14px">Drizzle queries in this repo follow one pattern. Read it once, you can read them all:</p>
+    <pre><code>// This is the shape of EVERY query in app/actions/*.ts
+
+import { db } from '@/lib/db'
+import { templates } from '@/lib/db/schema'
+import { eq, and, desc } from 'drizzle-orm'
+
+// Single row lookup
+const template = await db
+  .select()
+  .from(templates)
+  .where(eq(templates.id, templateId))
+  .limit(1)
+  .then((r) => r[0])
+
+// List with filter + sort
+const myTemplates = await db
+  .select()
+  .from(templates)
+  .where(eq(templates.userId, userId))
+  .orderBy(desc(templates.createdAt))
+
+// Insert
+await db.insert(templates).values({ id: nanoid(), userId, title, ... })
+
+// Update
+await db.update(templates)
+  .set({ title: newTitle, updatedAt: new Date() })
+  .where(eq(templates.id, id))
+
+// Delete
+await db.delete(templates).where(eq(templates.id, id))</code></pre>
+    <div class="callout" style="margin-top:10px">
+      <strong>The rule:</strong> Drizzle is query-only here. DDL is in db/migrations/*.sql. Never use Drizzle to create tables - use dbmate migrations instead.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Practice - read this query</div>
+    <h2>Predict what this returns</h2>
+    <p style="font-size:14px">Look at the query below. What shape does <code class="inline-code">result</code> have?</p>
+    <pre><code>const result = await db
+  .select()
+  .from(assessments)
+  .where(
+    and(
+      eq(assessments.userId, userId),
+      eq(assessments.status, 'active')
+    )
+  )
+  .orderBy(desc(assessments.createdAt))</code></pre>
+
+    <div class="quiz" data-quiz="q1">
+      <div class="quiz-head"><strong>Q1</strong></div>
+      <div class="quiz-body">
+        <p class="quiz-q">What type is result?</p>
+        <div class="choices">
+          <button class="choice" data-correct="false">A single assessment object with status active</button>
+          <button class="choice" data-correct="false">An array of all assessments across all users</button>
+          <button class="choice" data-correct="true">An array of assessments owned by userId with status active</button>
+          <button class="choice" data-correct="false">A count of active assessments for the user</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="background:#f6f4ef">
+    <div class="eyebrow">Field note</div>
+    <p style="margin:0; font-size:14px"><em>The schema is the Rosetta Stone. When you read app/actions/templates.ts and see .where(eq(templates.userId, userId)), you now know it is filtering the templates table by owner. When you see .set({ status: 'active' }), you know it is updating the assessments table. The schema tells you what every query touches.</em></p>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Go deeper</div>
+    <h2>Primary source</h2>
+    <p style="font-size:14px">Read <a href="../../../lib/db/schema.ts">lib/db/schema.ts</a> line by line. It is 185 lines. Every type (ScaleLevel, Domain, Question, Visibility, AssessmentStatus, LlmProvider, ApiFormat) is defined here. This file is the single source of truth for what data the app stores.</p>
+    <p class="muted" style="font-size:13px">Citations: schema from lib/db/schema.ts:1-185, query patterns from app/actions/templates.ts and app/actions/assessments.ts.</p>
+  </div>
+
+  <div class="card" style="border-style:dashed">
+    <div class="eyebrow">What is next</div>
+    <h2>Lesson 4 - Auth Guards: why some routes need login</h2>
+    <p class="muted" style="font-size:14px; margin:0 0 10px">You will learn the two-layer auth system: layout-level guard in app/(app)/layout.tsx and action-level guard in getUserId(). Plus why /respond/[token] is public.</p>
+    <div class="lesson-nav">
+      <a href="0002-local-run.html" class="btn secondary">Previous: Local run</a>
+      <a href="0004-auth-guards.html" class="btn">Next: Auth guards</a>
+    </div>
+    <div class="callout" style="margin-top:14px">
+      <strong>Stuck?</strong> Ask me anything - "what does eq() do?", "why is templateId not a real FK?", "how does the jsonb answers blob get aggregated?" - I am your teacher.
+    </div>
+  </div>
+
+  <p class="muted" style="font-size:12px; text-align:center; margin:22px 0 30px">Maturity-SE Onboarding - <a href="../reference/glossary.html">Glossary</a> - <a href="../MISSION.md">Mission</a> - <a href="../RESOURCES.md">Resources</a></p>
+</div>
+
+<script>
+document.querySelectorAll('.quiz').forEach(function(quiz) {
+  var choices = quiz.querySelectorAll('.choice');
+  var feedback = quiz.querySelector('.quiz-feedback');
+  var answered = false;
+  var messages = {
+    q1: {
+      ok: "Correct - result is an array (Drizzle select always returns arrays). The and() filter means both conditions must match: same owner AND status active.",
+      bad: "Drizzle select returns arrays, not single objects (no .limit(1) here). The and() filters to this user's active assessments only."
+    }
+  };
+  choices.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (answered) return;
+      answered = true;
+      var isCorrect = btn.dataset.correct === "true";
+      var id = quiz.dataset.quiz;
+      choices.forEach(function(c) {
+        c.disabled = true;
+        if (c.dataset.correct === "true") c.classList.add("correct");
+        else if (c === btn && !isCorrect) c.classList.add("wrong");
+      });
+      feedback.textContent = (isCorrect ? "Correct: " : "Not quite: ") + (isCorrect ? messages[id].ok : messages[id].bad);
+      feedback.className = "quiz-feedback show " + (isCorrect ? "ok" : "bad");
+    });
+  });
+});
+</script>
+</body>
+</html>

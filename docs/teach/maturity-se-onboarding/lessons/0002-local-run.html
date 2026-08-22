@@ -1,0 +1,270 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 2 - Run It Locally Without Fear</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="topbar"><div class="shell topbar-inner">
+  <div class="brand">Maturity-SE Onboarding <small>Lesson 2 of 5</small></div>
+  <nav class="nav-links">
+    <a href="../reference/glossary.html">Glossary</a>
+    <a href="0001-repo-map.html">L1</a>
+    <a href="#quiz">Quiz</a>
+    <a href="0003-db-schema.html">L3</a>
+  </nav>
+</div></div>
+
+<div class="shell">
+  <div class="hero">
+    <div class="kicker">You know the loop - now run it on your machine</div>
+    <h1>Run it locally without fear</h1>
+    <p>Every new engineer first task: <code class="inline-code">pnpm dev</code> and see something. But this repo wraps Postgres, auth, and LLM keys behind env vars. By the end you will know what each one does, why <code class="inline-code">db/run.js</code> exists, and what "merge to main auto-deploys" means.</p>
+    <div class="meta">
+      <span>10 min</span>
+      <span>One win: env, migrate, dev - and explain why</span>
+      <span><a href="../MISSION.md">Mission</a></span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">The two files that matter</div>
+    <h2>Env file and db runner</h2>
+    <p class="muted" style="font-size:14px; margin:0 0 12px">Everything else is automatic. Understand these two and you control the local stack.</p>
+    <h3>.env.development.local - what lives here</h3>
+    <pre><code># Required
+DATABASE_URL=postgres://user:pass@localhost:5432/maturity_se
+BETTER_AUTH_SECRET=run: openssl rand -hex 32
+
+# Optional - admin access
+ADMIN_EMAILS=you@company.com
+
+# Optional - fallback LLM
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+
+# Optional - web research
+TAVILY_API_KEY=</code></pre>
+    <div class="callout" style="margin-top:12px">
+      <strong>Pro tip:</strong> Copy from Vercel. Run <code class="inline-code">vercel link</code> then <code class="inline-code">vercel env pull .env.development.local</code>.
+    </div>
+    <h3>What each var powers</h3>
+    <div class="folder-grid">
+      <div class="folder">
+        <b>DATABASE_URL</b>
+        <div class="path">lib/db/index.ts + db/run.js</div>
+        <p>Two consumers: runtime Pool for queries, dbmate wrapper for migrations. Wrong value = dev starts but queries crash.</p>
+      </div>
+      <div class="folder">
+        <b>BETTER_AUTH_SECRET</b>
+        <div class="path">lib/auth.ts + lib/crypto.ts</div>
+        <p>Signing session cookies AND deriving AES key for BYOK encryption. Change it = sessions invalidate + keys unreadable.</p>
+      </div>
+      <div class="folder">
+        <b>AWS keys</b>
+        <div class="path">lib/llm.ts</div>
+        <p>Platform LLM via Bedrock. Only needed if template gen should work without user BYOK.</p>
+      </div>
+      <div class="folder">
+        <b>TAVILY_API_KEY</b>
+        <div class="path">app/actions/research.ts</div>
+        <p>Web search for research pipeline. Without it, research gen falls back to pure LLM.</p>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">The wrapper</div>
+    <h2>Why db/run.js exists</h2>
+    <p style="font-size:14px">Every migration goes through a 5-step chain:</p>
+    <div class="diagram">
+      <div class="step-row">
+        <div class="badge">1</div>
+        <div>
+          <h4>Load env</h4>
+          <p><code class="inline-code">db/run.js:10</code> reads .env.development.local via dotenv. dbmate alone does not know about this file.</p>
+        </div>
+      </div>
+      <div class="arrow">down</div>
+      <div class="step-row">
+        <div class="badge alt">2</div>
+        <div>
+          <h4>Check Aurora</h4>
+          <p><code class="inline-code">db/run.js:14</code> - if USE_AWS_AURORA=true, generates IAM auth token. Local dev skips this.</p>
+        </div>
+      </div>
+      <div class="arrow">down</div>
+      <div class="step-row">
+        <div class="badge">3</div>
+        <div>
+          <h4>Build DATABASE_URL</h4>
+          <p><code class="inline-code">db/run.js:34</code> - Aurora mode constructs URL with IAM token. Locally uses your .env value.</p>
+        </div>
+      </div>
+      <div class="arrow">down</div>
+      <div class="step-row">
+        <div class="badge alt">4</div>
+        <div>
+          <h4>Execute dbmate</h4>
+          <p><code class="inline-code">db/run.js:37</code> - runs dbmate up with merged env. dbmate reads DATABASE_URL from env object.</p>
+        </div>
+      </div>
+      <div class="arrow">down</div>
+      <div class="step-row">
+        <div class="badge">5</div>
+        <div>
+          <h4>Migrations run</h4>
+          <p>dbmate reads db/migrations/*.sql in order, tracks in dbmate_migrations table. Idempotent - safe to re-run.</p>
+        </div>
+      </div>
+    </div>
+    <div class="callout warn" style="margin-top:14px">
+      <strong>Key insight:</strong> dbmate is a standalone Go binary that does NOT read .env files. Every script goes through node db/run.js instead of calling dbmate directly. You cannot just run dbmate up from your shell.
+    </div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">The build chain</div>
+    <h2>What pnpm build actually does</h2>
+    <p style="font-size:14px">Look at package.json line 7:</p>
+    <pre><code>"build": "next build && node db/run.js dbmate up"</code></pre>
+    <p style="font-size:14px; margin-top:10px">Two things happen on deploy:</p>
+    <div class="diagram">
+      <div class="step-row">
+        <div class="badge">A</div>
+        <div>
+          <h4>next build</h4>
+          <p>TypeScript compiles, Next.js bundles. Note: ignoreBuildErrors: true in next.config.mjs means type errors do NOT block deploy. pnpm lint is your real gate.</p>
+        </div>
+      </div>
+      <div class="arrow">then</div>
+      <div class="step-row">
+        <div class="badge alt">B</div>
+        <div>
+          <h4>dbmate up</h4>
+          <p>Runs unapplied migrations from db/migrations/*.sql. Every merge to main auto-deploys code AND schema changes. No separate migration step in CI.</p>
+        </div>
+      </div>
+    </div>
+    <h3>The five migrations in order</h3>
+    <pre><code>0000_create_user_table.sql       user, session, account, verification
+                                 + templates, assessments, responses, llm_keys
+0001_promo_codes.sql             promo_codes, promo_code_redemptions
+0002_llm_usage_log.sql           llm_usage_log, user.defaultLlmMode
+0003_promo_codes_add_enabled.sql adds enabled column to promo_codes
+0004_templates_add_research_brief.sql adds researchBrief to templates</code></pre>
+    <p class="muted" style="font-size:13px">Numbering: YYYYMMDDHHMMSS_NNNN_name.sql. New migrations always go last. Run pnpm db:new my_name to generate a timestamped file.</p>
+  </div>
+  <div class="card" style="background:#f6f4ef">
+    <div class="eyebrow">Field note</div>
+    <p style="margin:0; font-size:14px"><em>You now know more about this repo infrastructure than most engineers who only use the UI. The wrapper pattern, the dual-purpose secret, the migration chain - these are the real walls of the system. Everything else is UI on top.</em></p>
+  </div>
+  <div class="card" id="quiz">
+    <div class="eyebrow">Retrieval - make it stick</div>
+    <h2>Check yourself</h2>
+    <p class="muted" style="font-size:13px">Effortful recall builds storage strength. All choices same length - no formatting clues.</p>
+
+    <div class="quiz" data-quiz="q1">
+      <div class="quiz-head"><strong>Q1 - The wrapper</strong><span class="muted" style="font-size:12px">1 / 3</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">Why does every db script go through db/run.js instead of calling dbmate directly?</p>
+        <div class="choices">
+          <button class="choice" data-correct="false">dbmate is too slow to run without a wrapper</button>
+          <button class="choice" data-correct="true">dbmate does not read .env files, so run.js loads them first</button>
+          <button class="choice" data-correct="false">run.js adds logging that dbmate lacks natively</button>
+          <button class="choice" data-correct="false">dbmate requires a compiled TypeScript entry point</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+
+    <div class="quiz" data-quiz="q2">
+      <div class="quiz-head"><strong>Q2 - The secret</strong><span class="muted" style="font-size:12px">2 / 3</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">What happens if you change BETTER_AUTH_SECRET in production?</p>
+        <div class="choices">
+          <button class="choice" data-correct="false">Only the admin session resets</button>
+          <button class="choice" data-correct="true">All sessions invalidate and encrypted LLM keys become unreadable</button>
+          <button class="choice" data-correct="false">The database migrations roll back automatically</button>
+          <button class="choice" data-correct="false">Nothing changes because the secret is optional</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+
+    <div class="quiz" data-quiz="q3">
+      <div class="quiz-head"><strong>Q3 - The deploy</strong><span class="muted" style="font-size:12px">3 / 3</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">In pnpm build, what does the chain next build && node db/run.js dbmate up guarantee?</p>
+        <div class="choices">
+          <button class="choice" data-correct="false">TypeScript errors block deployment to production</button>
+          <button class="choice" data-correct="true">Every merge to main deploys both code and schema changes automatically</button>
+          <button class="choice" data-correct="false">Migrations only run if the build passes type checking</button>
+          <button class="choice" data-correct="false">dbmate runs before next build to validate the schema</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+
+    <p class="muted" style="font-size:12px; margin-top:10px">Scores not stored - this is for your memory, not grading.</p>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Go deeper - one primary source</div>
+    <h2>Read db/run.js line by line</h2>
+    <p style="font-size:14px">It is 40 lines. Read <a href="../../../db/run.js">db/run.js</a> and you understand the entire migration infrastructure. Then skim <a href="../../../package.json">package.json scripts</a> to see how every command flows through it.</p>
+    <p class="muted" style="font-size:13px">Citations: env from .env.example, wrapper from db/run.js:1-40, build chain from package.json:7, migrations from db/migrations/.</p>
+  </div>
+
+  <div class="card" style="border-style:dashed">
+    <div class="eyebrow">What is next</div>
+    <h2>Lesson 3 - DB Schema: the four tables you care about</h2>
+    <p class="muted" style="font-size:14px; margin:0 0 10px">Deep dive into lib/db/schema.ts. You will learn what templates, assessments, responses, and llm_keys actually store, and how Drizzle queries map to SQL.</p>
+    <div class="lesson-nav">
+      <a href="0001-repo-map.html" class="btn secondary">← Lesson 1: Repo map</a>
+      <a href="0003-db-schema.html" class="btn">Next: DB Schema →</a>
+    </div>
+    <div class="callout" style="margin-top:14px">
+      <strong>Stuck?</strong> Ask me anything - "why does my migration fail?", "what is the dbmate_migrations table?", "how do I seed data?" - I am your teacher for this repo.
+    </div>
+  </div>
+
+  <p class="muted" style="font-size:12px; text-align:center; margin:22px 0 30px">Maturity-SE Onboarding - <a href="../reference/glossary.html">Glossary</a> - <a href="../MISSION.md">Mission</a> - <a href="../RESOURCES.md">Resources</a></p>
+</div>
+
+<script>
+document.querySelectorAll('.quiz').forEach(function(quiz) {
+  var choices = quiz.querySelectorAll('.choice');
+  var feedback = quiz.querySelector('.quiz-feedback');
+  var answered = false;
+  var messages = {
+    q1: {
+      ok: "Correct - dbmate is a Go binary that reads DATABASE_URL from the process env. run.js loads .env.development.local first so dbmate gets the right value.",
+      bad: "dbmate does not read .env files. That is why run.js loads the env file first, then passes it to dbmate via execSync."
+    },
+    q2: {
+      ok: "Yes - BETTER_AUTH_SECRET does two things: signs session cookies and derives the AES key for BYOK encryption. Changing it breaks both.",
+      bad: "BETTER_AUTH_SECRET powers session signing AND LLM key encryption. Change it = all sessions invalidate + encrypted keys unreadable."
+    },
+    q3: {
+      ok: "Right - next build && node db/run.js dbmate up means every merge to main deploys both code and schema. No separate migration step in CI.",
+      bad: "The chain guarantees code AND schema deploy together. ignoreBuildErrors means type errors do not block deploy - pnpm lint is your real gate."
+    }
+  };
+  choices.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (answered) return;
+      answered = true;
+      var isCorrect = btn.dataset.correct === "true";
+      var id = quiz.dataset.quiz;
+      choices.forEach(function(c) {
+        c.disabled = true;
+        if (c.dataset.correct === "true") c.classList.add("correct");
+        else if (c === btn && !isCorrect) c.classList.add("wrong");
+      });
+      feedback.textContent = (isCorrect ? "Correct: " : "Not quite: ") + (isCorrect ? messages[id].ok : messages[id].bad);
+      feedback.className = "quiz-feedback show " + (isCorrect ? "ok" : "bad");
+    });
+  });
+});
+</script>
+</body>
+</html>

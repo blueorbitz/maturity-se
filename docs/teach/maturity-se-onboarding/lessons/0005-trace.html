@@ -1,0 +1,229 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 5 - End-to-End Trace</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="topbar"><div class="shell topbar-inner">
+  <div class="brand">Maturity-SE Onboarding <small>Lesson 5 of 5</small></div>
+  <nav class="nav-links">
+    <a href="../reference/glossary.html">Glossary</a>
+    <a href="0003-db-schema.html">L3</a>
+    <a href="0004-auth-guards.html">L4</a>
+    <a href="#quiz">Quiz</a>
+  </nav>
+</div></div>
+<div class="shell">
+  <div class="hero">
+    <div class="kicker">Follow one feature from click to database</div>
+    <h1>End-to-end trace: template to report</h1>
+    <p>You have learned the loop, the stack, the schema, and the guards. Now follow one feature through every file it touches. By the end you can trace any feature in this repo without guessing.</p>
+    <div class="meta">
+      <span>12 min</span>
+      <span>One win: trace any feature end-to-end in under 5 minutes</span>
+      <span><a href="../MISSION.md">Mission</a></span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Step 1 - create template</div>
+    <h2>User clicks "Generate with AI"</h2>
+    <p style="font-size:14px">The flow starts in <a href="../../../components/new-template-form.tsx">components/new-template-form.tsx</a>:</p>
+    <pre><code>1. User fills: title, topic, context, targetAudience, scaleLength
+2. Optional: toggles webResearch + deepReasoning (costs 1-3 credits)
+3. Clicks "Generate" -> calls generateTemplate server action</code></pre>
+    <p style="font-size:14px; margin-top:10px">The server action in <a href="../../../app/actions/templates.ts">app/actions/templates.ts:109</a> does:</p>
+    <pre><code>generateTemplate()
+  -> getUserId()                          // auth guard
+  -> sanitizeForLlm() on all inputs       // strip HTML, control chars, injection
+  -> resolveLlm()                         // platform credits or BYOK key?
+  -> build prompt with topic/scale/research
+  -> callLlm() or callLlmWithPlatformCredentials()
+  -> stripReasoningTags()                 // remove thinking blocks
+  -> extractFirstJsonObject()             // brace-depth parser, repairs truncation
+  -> JSON.parse() -> { scaleLevels, domains }</code></pre>
+    <div class="callout" style="margin-top:10px">
+      <strong>The robustness trick:</strong> extractFirstJsonObject (lines 22-75) walks char-by-char tracking brace depth and string escapes. If the LLM output is truncated, it repairs by closing remaining braces/brackets. This is why template generation rarely fails.
+    </div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Step 2 - save template</div>
+    <h2>Template editor -> saveTemplate</h2>
+    <p style="font-size:14px">The generated draft loads into <a href="../../../components/template-editor.tsx">components/template-editor.tsx</a>. User can edit domains, questions, scale labels. Then clicks Save:</p>
+    <pre><code>saveTemplate() in app/actions/templates.ts
+  -> getUserId()                          // auth guard
+  -> Zod validation (SaveTemplateSchema)
+  -> If id exists: db.update(templates).set({...}).where(eq(templates.id, id))
+  -> If new: db.insert(templates).values({ id: nanoid(), userId, ... })
+  -> revalidatePath("/templates")          // bust Next.js cache</code></pre>
+    <p style="font-size:14px; margin-top:10px">The template now has <code class="inline-code">visibility: private</code>. To publish it to the gallery:</p>
+    <pre><code>updateTemplateVisibility(id, "public")
+  -> Check clonedFromId is null (cloned templates cannot be re-published)
+  -> db.update(templates).set({ visibility: "public" })</code></pre>
+    <div class="callout warn" style="margin-top:10px">
+      <strong>The clone rule:</strong> cloneTemplate() copies a public template to your private list with clonedFromId set. updateTemplateVisibility blocks cloned templates from going public. This prevents re-publishing someone else's work.
+    </div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Step 3 - create assessment</div>
+    <h2>Assessment form -> createAssessment</h2>
+    <p style="font-size:14px">User picks a template, fills teamName and dueDate. <a href="../../../components/new-assessment-form.tsx">components/new-assessment-form.tsx</a> calls:</p>
+    <pre><code>createAssessment() in app/actions/assessments.ts
+  -> getUserId()                          // auth guard
+  -> Zod validation
+  -> db.insert(assessments).values({
+       id: nanoid(),
+       userId,
+       templateId,
+       title,
+       status: "draft",                   // starts as draft
+       inviteToken: nanoid(32),           // the shareable key
+       teamName,
+       dueDate,
+     })</code></pre>
+    <p style="font-size:14px; margin-top:10px">The invite token is now live but the assessment is draft. Owner toggles to active via AssessmentStatusControl:</p>
+    <pre><code>updateAssessmentStatus(id, "active")
+  -> db.update(assessments).set({ status: "active" })</code></pre>
+    <p style="font-size:14px; margin-top:10px">Now the invite link works. The link is <code class="inline-code">/respond/{inviteToken}</code>.</p>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Step 4 - submit response</div>
+    <h2>Respondent opens link -> submitResponse</h2>
+    <p style="font-size:14px"><a href="../../../app/respond/[token]/page.tsx">app/respond/[token]/page.tsx</a> is public (outside (app)/ layout). It does:</p>
+    <pre><code>1. Lookup assessment by inviteToken
+2. If not found: notFound()
+3. If status === 'closed': show "Assessment Closed"
+4. Lookup template by assessment.templateId
+5. Pass both to RespondForm component</code></pre>
+    <p style="font-size:14px; margin-top:10px"><a href="../../../components/respond-form.tsx">components/respond-form.tsx</a> renders: intro screen, domain tabs, scale buttons. User picks values. On submit:</p>
+    <pre><code>submitResponse() in app/actions/assessments.ts
+  -> No getUserId() - this is the public action
+  -> Verify assessment.status === 'active'
+  -> db.insert(responses).values({
+       id: nanoid(),
+       assessmentId,
+       respondentName,
+       respondentRole,
+       answers: { "q-dom1-q1": 3, "q-dom1-q2": 4, ... },
+     })</code></pre>
+    <div class="callout" style="margin-top:10px">
+      <strong>The answers blob:</strong> Each key is a question ID from the template's domains.questions. Values are scale numbers (1-scaleLength) or text strings. The report aggregates these per domain and per question.
+    </div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Step 5 - view report</div>
+    <h2>Report page -> MaturityReport</h2>
+    <p style="font-size:14px"><a href="../../../app/(app)/assessments/[id]/report/page.tsx">app/(app)/assessments/[id]/report/page.tsx</a> is behind the auth guard. It does:</p>
+    <pre><code>1. getUserId() - auth guard
+2. Get assessment by ID (owner check)
+3. Get all responses for this assessment
+4. Get template for domain/question labels
+5. Compute aggregations:
+   - domainScores: average per domain
+   - scoreDistribution: count per scale value
+   - respondentAverages: per-respondent average
+   - overallScore: global average
+6. Pass to MaturityReport component</code></pre>
+    <p style="font-size:14px; margin-top:10px"><a href="../../../components/maturity-report.tsx">components/maturity-report.tsx</a> renders with Recharts:</p>
+    <pre><code>- OverallScoreGauge: circular gauge showing global average
+- DomainRadarChart: radar plot of domain averages
+- DomainBarChart: horizontal bars for domain scores
+- ScoreDistributionChart: histogram of scale values
+- RespondentTable: per-respondent averages with roles</code></pre>
+    <div class="callout" style="margin-top:10px">
+      <strong>The full loop complete:</strong> Template (what to ask) -> Assessment (who+when, with token) -> Response (one jsonb blob each) -> Report (aggregated scores). You just traced 5 files, 4 tables, 2 auth layers, and 1 LLM pipeline.
+    </div>
+  </div>
+  <div class="card" id="quiz">
+    <div class="eyebrow">Final check - you know this repo</div>
+    <h2>Put it all together</h2>
+    <div class="quiz" data-quiz="q1">
+      <div class="quiz-head"><strong>Q1</strong></div>
+      <div class="quiz-body">
+        <p class="quiz-q">A user reports "my template generation failed with a JSON parse error". What is the most likely cause?</p>
+        <div class="choices">
+          <button class="choice" data-correct="false">The database connection dropped mid-query</button>
+          <button class="choice" data-correct="false">The assessment status was set to closed</button>
+          <button class="choice" data-correct="true">The LLM output was truncated and extractFirstJsonObject could not repair it</button>
+          <button class="choice" data-correct="false">The user session expired during generation</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+    <div class="quiz" data-quiz="q2">
+      <div class="quiz-head"><strong>Q2</strong></div>
+      <div class="quiz-body">
+        <p class="quiz-q">You need to add a new required field to the templates table. What do you do?</p>
+        <div class="choices">
+          <button class="choice" data-correct="false">Add the column to lib/db/schema.ts and Drizzle handles migration</button>
+          <button class="choice" data-correct="true">Create a new dbmate SQL migration file AND update the Drizzle schema</button>
+          <button class="choice" data-correct="false">Just update the TypeScript types in the schema file</button>
+          <button class="choice" data-correct="false">Run pnpm db:migrate and it auto-detects the schema change</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+    <p class="muted" style="font-size:12px; margin-top:10px">Scores not stored - this is for your memory.</p>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Congratulations</div>
+    <h2>You are no longer lost</h2>
+    <p style="font-size:14px">You can now: explain the core loop, run the app locally, read any Drizzle query, trace any route to its auth guard, and follow any feature end-to-end. That is more than most engineers know on day one.</p>
+    <h3>Your toolkit</h3>
+    <pre><code>lib/db/schema.ts          - what data exists
+app/actions/*.ts          - how mutations work
+lib/auth-helpers.ts       - who is allowed
+app/(app)/layout.tsx      - page-level guard
+db/run.js                 - how migrations run
+AGENTS.md                 - how to work here</code></pre>
+    <div class="callout" style="margin-top:14px">
+      <strong>Keep learning:</strong> Read the specs in docs/spec/ to understand why features exist. Check docs/issues-tracker/ for the lineage of decisions. Ask me anything about this repo - I am your teacher.
+    </div>
+  </div>
+  <div class="card" style="border-style:dashed">
+    <div class="eyebrow">Navigation</div>
+    <h2>All lessons</h2>
+    <div class="lesson-nav" style="flex-direction:column; gap:8px">
+      <a href="0001-repo-map.html" class="btn secondary" style="text-align:left">Lesson 1: The 60-Second Mental Model</a>
+      <a href="0002-local-run.html" class="btn secondary" style="text-align:left">Lesson 2: Run It Locally Without Fear</a>
+      <a href="0003-db-schema.html" class="btn secondary" style="text-align:left">Lesson 3: DB Schema - The Four Tables</a>
+      <a href="0004-auth-guards.html" class="btn secondary" style="text-align:left">Lesson 4: Auth Guards - Who Needs Login</a>
+      <a href="0005-trace.html" class="btn secondary" style="text-align:left">Lesson 5: End-to-End Trace</a>
+    </div>
+    <div class="lesson-nav" style="margin-top:16px">
+      <a href="0004-auth-guards.html" class="btn secondary">Previous: Auth guards</a>
+      <span class="muted" style="font-size:13px; align-self:center">Lesson 5 of 5 - Complete</span>
+    </div>
+  </div>
+  <p class="muted" style="font-size:12px; text-align:center; margin:22px 0 30px">Maturity-SE Onboarding - <a href="../reference/glossary.html">Glossary</a> - <a href="../MISSION.md">Mission</a> - <a href="../RESOURCES.md">Resources</a></p>
+</div>
+<script>
+document.querySelectorAll('.quiz').forEach(function(quiz) {
+  var choices = quiz.querySelectorAll('.choice');
+  var feedback = quiz.querySelector('.quiz-feedback');
+  var answered = false;
+  var messages = {
+    q1: { ok: "Correct - extractFirstJsonObject repairs truncated JSON, but if the LLM output is too mangled, it fails. This is the most common generation failure.", bad: "Template generation failures are almost always JSON parsing issues. The repair logic in extractFirstJsonObject handles most truncation, but extreme cases fail." },
+    q2: { ok: "Correct - Drizzle is query-only. You need a dbmate SQL migration for DDL AND update the Drizzle schema for queries. Both must match.", bad: "Drizzle does not auto-migrate. You need a dbmate SQL migration (db/migrations/*.sql) for DDL AND update lib/db/schema.ts for queries." }
+  };
+  choices.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (answered) return;
+      answered = true;
+      var isCorrect = btn.dataset.correct === "true";
+      var id = quiz.dataset.quiz;
+      choices.forEach(function(c) {
+        c.disabled = true;
+        if (c.dataset.correct === "true") c.classList.add("correct");
+        else if (c === btn && !isCorrect) c.classList.add("wrong");
+      });
+      feedback.textContent = (isCorrect ? "Correct: " : "Not quite: ") + (isCorrect ? messages[id].ok : messages[id].bad);
+      feedback.className = "quiz-feedback show " + (isCorrect ? "ok" : "bad");
+    });
+  });
+});
+</script>
+</body>
+</html>

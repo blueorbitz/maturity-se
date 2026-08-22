@@ -1,0 +1,170 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 4 - Auth Guards</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="topbar"><div class="shell topbar-inner">
+  <div class="brand">Maturity-SE Onboarding <small>Lesson 4 of 5</small></div>
+  <nav class="nav-links">
+    <a href="../reference/glossary.html">Glossary</a>
+    <a href="0002-local-run.html">L2</a>
+    <a href="0003-db-schema.html">L3</a>
+    <a href="#quiz">Quiz</a>
+    <a href="0005-trace.html">L5</a>
+  </nav>
+</div></div>
+<div class="shell">
+  <div class="hero">
+    <div class="kicker">Two layers, one rule</div>
+    <h1>Auth Guards: who needs login</h1>
+    <p>This repo has a two-layer auth system. Learn the layers and you will never accidentally expose a protected route or block a public one. The rule: <strong>layout guards pages, getUserId() guards mutations</strong>.</p>
+    <div class="meta">
+      <span>8 min</span>
+      <span>One win: trace any route to its auth guard in 10 seconds</span>
+      <span><a href="../MISSION.md">Mission</a></span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Layer 1 - the layout guard</div>
+    <h2>app/(app)/layout.tsx - the gate</h2>
+    <p style="font-size:14px">This 19-line file protects the entire (app) route group:</p>
+    <pre><code>// app/(app)/layout.tsx - line 7-8
+const session = await getSession()
+if (!session?.user) redirect("/sign-in")</code></pre>
+    <p style="font-size:14px; margin-top:10px">Every page under <code class="inline-code">app/(app)/*</code> is behind this gate. If not logged in, you get bounced to /sign-in before any page renders.</p>
+    <div class="folder-grid" style="margin-top:10px">
+      <div class="folder">
+        <b>Protected by layout</b>
+        <p>/dashboard, /templates, /assessments, /gallery, /reports, /settings, /usage, /admin - everything in the (app) group.</p>
+      </div>
+      <div class="folder">
+        <b>Outside the gate</b>
+        <p>/sign-in, /sign-up, /respond/[token] - these live outside app/(app)/ and have no layout guard. Respondents never log in.</p>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:14px">
+      <strong>The rule:</strong> If your page is inside app/(app)/, it is protected. If you create a new route group or move a page outside (app)/, it becomes public.
+    </div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Layer 2 - the action guard</div>
+    <h2>getUserId() - the lock on mutations</h2>
+    <p style="font-size:14px">Every server action starts with this call:</p>
+    <pre><code>// lib/auth-helpers.ts
+export async function getUserId(): Promise&lt;string&gt; {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session?.user) throw new Error("Unauthorized")
+  return session.user.id
+}</code></pre>
+    <p style="font-size:14px; margin-top:10px">Even if someone bypasses the layout by calling a server action directly from curl, getUserId() checks the session cookie. If invalid, it throws Unauthorized.</p>
+    <h3>Where it appears</h3>
+    <pre><code>// app/actions/templates.ts - first line of every action
+const userId = await getUserId()
+
+// app/actions/assessments.ts - same pattern
+const userId = await getUserId()
+
+// app/actions/llm-keys.ts - same pattern
+const userId = await getUserId()</code></pre>
+    <div class="callout warn" style="margin-top:10px">
+      <strong>The exception:</strong> submitResponse in app/actions/assessments.ts does NOT call getUserId(). Respondents are anonymous - they only need a valid inviteToken.
+    </div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">The public route</div>
+    <h2>/respond/[token] - no auth, just token</h2>
+    <p style="font-size:14px">This route lives outside app/(app)/ and does two checks that are NOT auth:</p>
+    <pre><code>// app/respond/[token]/page.tsx - lines 16-38
+const assessment = await db.select().from(assessments)
+  .where(eq(assessments.inviteToken, token)).limit(1)
+
+if (!assessment) notFound()           // Check 1: token exists
+if (assessment.status === 'closed')   // Check 2: assessment is active
+  return "Assessment Closed"</code></pre>
+    <p style="font-size:14px; margin-top:10px">The inviteToken is a 32-character nanoid (unguessable). No login required. The assessment owner controls access by toggling status between draft, active, and closed.</p>
+    <div class="callout" style="margin-top:10px">
+      <strong>The design:</strong> Templates can be public (gallery), but assessments are always private to the owner. The inviteToken is the only way in. When you close an assessment, respondents see a dead end.
+    </div>
+  </div>
+  <div class="card" id="quiz">
+    <div class="eyebrow">Practice - trace the guard</div>
+    <h2>Which layer protects this route?</h2>
+    <div class="quiz" data-quiz="q1">
+      <div class="quiz-head"><strong>Q1</strong></div>
+      <div class="quiz-body">
+        <p class="quiz-q">A user visits /templates/new without being logged in. What happens?</p>
+        <div class="choices">
+          <button class="choice" data-correct="false">The page renders but saveTemplate throws Unauthorized</button>
+          <button class="choice" data-correct="true">app/(app)/layout.tsx redirects them to /sign-in before the page loads</button>
+          <button class="choice" data-correct="false">Next.js returns a 404 because the route does not exist</button>
+          <button class="choice" data-correct="false">The page renders with empty data and a blank form</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+    <div class="quiz" data-quiz="q2">
+      <div class="quiz-head"><strong>Q2</strong></div>
+      <div class="quiz-body">
+        <p class="quiz-q">Someone calls saveTemplate server action via curl without a session cookie. What happens?</p>
+        <div class="choices">
+          <button class="choice" data-correct="false">The template saves to the database anyway</button>
+          <button class="choice" data-correct="false">Next.js blocks the request at the edge</button>
+          <button class="choice" data-correct="true">getUserId() throws Unauthorized because there is no valid session</button>
+          <button class="choice" data-correct="false">The action returns a zod validation error</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Go deeper</div>
+    <h2>Primary source</h2>
+    <p style="font-size:14px">Read <a href="../../../lib/auth-helpers.ts">lib/auth-helpers.ts</a> (14 lines) and <a href="../../../app/(app)/layout.tsx">app/(app)/layout.tsx</a> (19 lines). Together they are the entire auth system for pages and mutations.</p>
+    <p class="muted" style="font-size:13px">Citations: layout guard from app/(app)/layout.tsx:7-8, action guard from lib/auth-helpers.ts:6-9, public route from app/respond/[token]/page.tsx:16-38.</p>
+  </div>
+  <div class="card" style="border-style:dashed">
+    <div class="eyebrow">What is next</div>
+    <h2>Lesson 5 - End-to-end trace</h2>
+    <p class="muted" style="font-size:14px; margin:0 0 10px">Follow a template from creation through AI generation, assessment setup, invite link, response submission, to report aggregation. Every file touched, in order.</p>
+    <div class="lesson-nav">
+      <a href="0003-db-schema.html" class="btn secondary">Previous: DB Schema</a>
+      <a href="0005-trace.html" class="btn">Next: End-to-end trace</a>
+    </div>
+    <div class="callout" style="margin-top:14px">
+      <strong>Stuck?</strong> Ask me - "how does cloneTemplate work?", "why does the report use Recharts?", "what happens if I delete a template with active assessments?" - I am your teacher.
+    </div>
+  </div>
+  <p class="muted" style="font-size:12px; text-align:center; margin:22px 0 30px">Maturity-SE Onboarding - <a href="../reference/glossary.html">Glossary</a> - <a href="../MISSION.md">Mission</a> - <a href="../RESOURCES.md">Resources</a></p>
+</div>
+<script>
+document.querySelectorAll('.quiz').forEach(function(quiz) {
+  var choices = quiz.querySelectorAll('.choice');
+  var feedback = quiz.querySelector('.quiz-feedback');
+  var answered = false;
+  var messages = {
+    q1: { ok: "Correct - app/(app)/layout.tsx runs getSession() before any page component renders. The redirect happens at the layout level, not in the page.", bad: "The layout guard runs first. app/(app)/layout.tsx checks getSession() before any child page renders, so they never see /templates/new." },
+    q2: { ok: "Correct - getUserId() reads the session from cookies via headers(). No cookie = no session = throw Unauthorized.", bad: "getUserId() is the second layer. It checks the session cookie server-side. No cookie means no session, so it throws Unauthorized." }
+  };
+  choices.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (answered) return;
+      answered = true;
+      var isCorrect = btn.dataset.correct === "true";
+      var id = quiz.dataset.quiz;
+      choices.forEach(function(c) {
+        c.disabled = true;
+        if (c.dataset.correct === "true") c.classList.add("correct");
+        else if (c === btn && !isCorrect) c.classList.add("wrong");
+      });
+      feedback.textContent = (isCorrect ? "Correct: " : "Not quite: ") + (isCorrect ? messages[id].ok : messages[id].bad);
+      feedback.className = "quiz-feedback show " + (isCorrect ? "ok" : "bad");
+    });
+  });
+});
+</script>
+</body>
+</html>

@@ -49,6 +49,22 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Onboarding Tutorial
+
+New to the project? Start with the interactive onboarding tutorial:
+
+**[Start the Onboarding Tutorial →](https://blueorbitz.github.io/maturity-se/teach/maturity-se-onboarding/)**
+
+5 lessons (~50 min total) covering the core loop, local setup, DB schema, auth guards, and end-to-end feature tracing. Each lesson has interactive quizzes to build lasting understanding.
+
+| Lesson | Topic | Win |
+|--------|-------|-----|
+| [1. The 60-Second Mental Model](https://blueorbitz.github.io/maturity-se/docs/teach/maturity-se-onboarding/lessons/0001-repo-map.html) | Core product loop & folder layout | Explain Template → Assessment → Response → Report |
+| [2. Run It Locally](https://blueorbitz.github.io/maturity-se/docs/teach/maturity-se-onboarding/lessons/0002-local-run.html) | Env vars, db/run.js, migrations | Get pnpm dev + db running locally |
+| [3. DB Schema](https://blueorbitz.github.io/maturity-se/docs/teach/maturity-se-onboarding/lessons/0003-db-schema.html) | The four tables that matter | Read any Drizzle query and predict the result |
+| [4. Auth Guards](https://blueorbitz.github.io/maturity-se/docs/teach/maturity-se-onboarding/lessons/0004-auth-guards.html) | Layout vs action guards | Trace any route to its auth check |
+| [5. End-to-End Trace](https://blueorbitz.github.io/maturity-se/docs/teach/maturity-se-onboarding/lessons/0005-trace.html) | Follow one feature through every file | Trace any feature in under 5 min |
+
 ## Learn More
 
 To learn more, take a look at the following resources:

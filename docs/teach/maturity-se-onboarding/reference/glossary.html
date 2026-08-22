@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossary — Maturity-SE</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  dt{font-weight:700; margin-top:16px}
+  dd{margin:6px 0 0 0; color:#3a3a38; font-size:14px; border-left:2px solid var(--border); padding-left:12px}
+  dd .where{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="shell topbar-inner">
+  <div class="brand">Maturity-SE <small>Reference — Glossary</small></div>
+  <div class="nav-links"><a href="../lessons/0001-repo-map.html">Lesson 1</a><a href="#terms">Terms</a></div>
+</div></div>
+
+<div class="shell">
+  <div class="hero" style="padding-bottom:10px">
+    <div class="kicker">Reference</div>
+    <h1>Glossary</h1>
+    <p>Living definitions — adhered to in every lesson. If code and this glossary disagree, code wins and we update here.</p>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">How to use</div>
+    <p class="muted" style="margin:0; font-size:14px">Keep this open while reading code. Each term links to where it lives.</p>
+    <dl id="terms">
+      <dt>Template</dt>
+      <dd>A questionnaire definition. <span class="where">lib/db/schema.ts → templates</span><br>Fields: title, topic, context, targetAudience, scaleLength (default 5), scaleLevels[], domains[] → questions[]. <code>visibility: private | public</code>, <code>clonedFromId</code>, <code>researchBrief</code>.</dd>
+
+      <dt>ScaleLevel</dt>
+      <dd>One rung on the maturity scale. <span class="where">lib/db/schema.ts</span><br><code>{ level: number, label: string, description: string }</code>. Count = <code>scaleLength</code>.</dd>
+
+      <dt>Domain</dt>
+      <dd>A section inside a template. <span class="where">lib/db/schema.ts → Domain</span><br><code>{ id, name, questions: Question[] }</code>. Reports aggregate per domain.</dd>
+
+      <dt>Question</dt>
+      <dd><span class="where">lib/db/schema.ts → Question</span><br><code>{ id, text, type: 'scale' | 'text' }</code>. Scale questions get 1..scaleLength buttons.</dd>
+
+      <dt>Assessment</dt>
+      <dd>An instance of a template sent to a team. <span class="where">assessments</span><br><code>status: draft | active | closed</code>, <code>inviteToken: nanoid(32) unique</code>, <code>teamName</code>, <code>dueDate</code>.</dd>
+
+      <dt>Response</dt>
+      <dd>One respondent's submission. <span class="where">responses</span><br><code>answers: Record&lt;questionId, number|string&gt;</code> in jsonb, plus <code>respondentName/Role</code>.</dd>
+
+      <dt>Invite Token</dt>
+      <dd>The shareable key in <code>/respond/[token]</code>. No auth required to submit. Checked for <code>active</code> status in <code>submitResponse</code>.</dd>
+
+      <dt>Server Action</dt>
+      <dd>Repo convention for mutations: <code>"use server"</code> in <code>app/actions/*.ts</code>, zod validation, <code>getUserId()</code> guard. Not API routes.</dd>
+
+      <dt>Drizzle vs dbmate</dt>
+      <dd>Drizzle = queries only. dbmate = migrations (SQL in <code>db/migrations</code>). <span class="where">db/run.js</span> loads <code>.env.development.local</code> for dbmate.</dd>
+
+      <dt>better-auth</dt>
+      <dd>Auth library. <span class="where">lib/auth.ts, lib/auth-helpers.ts</span><br>Pool adapter, 7-day session, <code>trustedOrigins: *</code> in dev, <code>getUserId()</code> throws if unauthenticated.</dd>
+
+      <dt>BYOK</dt>
+      <dd>"Bring Your Own Key" — user-supplied LLM key stored encrypted in <code>llm_keys</code> via <span class="where">lib/crypto.ts AES-GCM PBKDF2</span>.</dd>
+
+      <dt>Platform Credits</dt>
+      <dd>Promo-code generations. <span class="where">promo_codes, promo_code_redemptions, llm_usage_log</span><br>Research pipeline costs 1-3 credits: base 1 + webResearch 1 + deepReasoning 1.</dd>
+
+      <dt>Tavily</dt>
+      <dd>Web search provider for research pipeline. <span class="where">app/actions/research.ts → searchWeb</span> (<code>advanced, maxResults 5</code>).</dd>
+
+      <dt>PostHog</dt>
+      <dd>Analytics. <span class="where">components/posthog-provider.tsx, posthog-identify.tsx</span> — lazy init, <code>$pageview</code> + identify on auth.</dd>
+
+      <dt>shadcn / base-nova</dt>
+      <dd>UI system. <span class="where">components.json, components/ui/*, lib/utils.ts cn()</span> — neutral, CSS vars in <code>app/globals.css</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h2>Where to go next</h2>
+    <p class="muted" style="font-size:14px">Glossary is the map legend. The territory is in the lessons — each one practices a term in context.</p>
+    <p><a href="../lessons/0001-repo-map.html">→ Lesson 1: The 60-Second Mental Model</a></p>
+  </div>
+</div>
+</body>
+</html>
