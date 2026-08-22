@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 1 — The 60-Second Mental Model • Maturity-SE Onboarding</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="topbar"><div class="shell topbar-inner">
+  <div class="brand">Maturity-SE Onboarding <small>Lesson 1 of 5 • 8 min</small></div>
+  <nav class="nav-links">
+    <a href="../reference/glossary.html">Glossary</a>
+    <a href="#quiz">Quiz</a>
+    <a href="#next">Next</a>
+  </nav>
+</div></div>
+
+<div class="shell">
+  <div class="hero">
+    <div class="kicker">Start here — you don't know what you don't know yet</div>
+    <h1>The 60-second mental model</h1>
+    <p>Before you open 40 files, hold one picture in your head. Everything in this repo hangs off a single loop: <strong>Template → Assessment → Response → Report</strong>. Learn the loop, and every folder has a place.</p>
+    <div class="meta">
+      <span>⏱ 8 min</span>
+      <span>🎯 One win: explain the loop + point to where each step lives</span>
+      <span>📍 Mission: <a href="../MISSION.md">onboarding</a></span>
+    </div>
+  </div>
+
+  <!-- The one diagram -->
+  <div class="card">
+    <div class="eyebrow">The loop — memorize this shape</div>
+    <h2 style="margin-bottom:14px">Template → Assessment → Response → Report</h2>
+
+    <div class="diagram">
+      <div class="step-row">
+        <div class="badge">1</div>
+        <div>
+          <h4>Template — the questionnaire</h4>
+          <p>Defines <em>what to ask</em>: title, scale (1–5 by default), domains → questions. Created manually or AI-generated. <span class="mono" style="font-size:12px">components/template-editor.tsx · app/actions/templates.ts:generateTemplate</span></p>
+        </div>
+      </div>
+      <div class="arrow">↓ visibility: private → public (gallery) · clona ble, but cloned → cannot re-publish</div>
+
+      <div class="step-row">
+        <div class="badge alt">2</div>
+        <div>
+          <h4>Assessment — the instance</h4>
+          <p>Binds a template to a team + due date. Gets a <code class="inline-code">inviteToken = nanoid(32)</code> — the shareable link. <span class="mono" style="font-size:12px">app/actions/assessments.ts:createAssessment · status: draft | active | closed</span></p>
+        </div>
+      </div>
+      <div class="arrow">↓ share /respond/[token] — no auth required</div>
+
+      <div class="step-row">
+        <div class="badge">3</div>
+        <div>
+          <h4>Response — one person's answers</h4>
+          <p>Respondent picks a scale value per question. Stored as <code class="inline-code">answers: Record&lt;questionId, number|string&gt;</code> jsonb. <span class="mono" style="font-size:12px">app/respond/[token]/page.tsx · components/respond-form.tsx · submitResponse</span></p>
+        </div>
+      </div>
+      <div class="arrow">↓ aggregate per domain / per question</div>
+
+      <div class="step-row">
+        <div class="badge alt">4</div>
+        <div>
+          <h4>Report — the read-out</h4>
+          <p>Averages, distributions, radar & bar charts (Recharts). Computed in the report page, rendered by <code class="inline-code">MaturityReport</code>. <span class="mono" style="font-size:12px">app/(app)/assessments/[id]/report/page.tsx · components/maturity-report.tsx</span></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:16px">
+      <strong>Say it back:</strong> "I create a <em>template</em> (what to ask), spin up an <em>assessment</em> (who + when, with a token), collect <em>responses</em> (one jsonb blob each), and read a <em>report</em> (aggregated scores)." If you can say that, you already orient faster than most day-one engineers.
+    </div>
+  </div>
+
+  <!-- Folder roles -->
+  <div class="card">
+    <div class="eyebrow">Where things live — 4 districts</div>
+    <h2>Don't memorize files. Learn the districts.</h2>
+    <p class="muted" style="font-size:14px; margin:4px 0 12px">Every repo has "where do I look?" districts. Here there are four.</p>
+
+    <div class="folder-grid">
+      <div class="folder">
+        <b>🏠 app/</b>
+        <div class="path">App Router — routes + server actions</div>
+        <p><code>app/(app)/*</code> is the authed shell (sidebar guard). <code>app/respond/[token]</code> is public. <code>app/actions/*</code> is where mutations live — <em>not</em> <code>app/api</code> (only auth there). If you add a feature that writes data, it starts in <code>app/actions</code>.</p>
+      </div>
+      <div class="folder">
+        <b>🧩 components/</b>
+        <div class="path">UI — feature components + ui primitives</div>
+        <p>Feature files: <code>template-editor</code>, <code>respond-form</code>, <code>maturity-report</code>, <code>new-assessment-form</code>. Primitives in <code>components/ui/*</code> are shadcn (base-nova). Styles in <code>app/globals.css</code>.</p>
+      </div>
+      <div class="folder">
+        <b>🗄 lib/ + db/</b>
+        <div class="path">DB, auth, LLM, crypto — the engine room</div>
+        <p><code>lib/db/schema.ts</code> is your Rosetta Stone (Drizzle tables). <code>db/migrations/*.sql</code> is the DDL — Drizzle never migrates. <code>db/run.js</code> just loads <code>.env.development.local</code> for dbmate. <code>lib/auth.ts</code> + <code>lib/llm.ts</code> + <code>lib/crypto.ts</code> explain auth/LLM/BYOK.</p>
+      </div>
+      <div class="folder">
+        <b>📄 docs/spec/</b>
+        <div class="path">Why, not just how</div>
+        <p>6 specs: promo credits, dbmate refactor, usage log, PostHog, template rules, AI research. Read a spec <em>before</em> you touch its feature — it's the closest thing to ADRs here. <code>docs/issues-tracker</code> + <code>docs/demo</code> give lineage.</p>
+      </div>
+    </div>
+
+    <h3>Three files to open first — always</h3>
+    <pre><code>lib/db/schema.ts          — what data exists
+app/actions/templates.ts   — how the core domain mutates
+AGENTS.md                  — how this repo wants you to work (pnpm, lint, server actions, Drizzle+dbmate)</code></pre>
+    <p class="muted" style="font-size:13px">Tip: <code>AGENTS.md:7</code> — <em>single quotes, no semicolons, strict TS, functional, server actions for mutations, Drizzle for queries, dbmate for migrations.</em> Violate this and CI will tell you.</p>
+  </div>
+
+  <!-- The five-minute tour: what to trace -->
+  <div class="card">
+    <div class="eyebrow">Practice — trace one thread end-to-end (2 min)</div>
+    <h2>Follow the invite token</h2>
+    <p class="muted" style="font-size:14px">Open these three files in order. You don't need to understand every line — just see the token move.</p>
+    <pre><code>1. app/actions/assessments.ts → createAssessment()
+   - nanoid(32) → inviteToken, status defaults to 'draft'
+
+2. app/(app)/assessments/[id]/page.tsx
+   - shows InviteLinkBox with /respond/[token]
+
+3. app/respond/[token]/page.tsx → components/respond-form.tsx
+   - public route, checks assessment.status === 'active'
+   - submitResponse() writes responses.answers (jsonb)</code></pre>
+    <div class="callout warn">
+      <strong>Heads-up:</strong> <code>app/(app)/layout.tsx:10</code> guards the whole <code>(app)</code> group — <code>getSession() → redirect('/sign-in')</code>. But <code>/respond/[token]</code> lives <em>outside</em> that group on purpose. That's why respondents need no login.
+    </div>
+  </div>
+
+  <!-- Density breaker -->
+  <div class="card" style="background:#f6f4ef">
+    <div class="eyebrow">Field note</div>
+    <p style="margin:0; font-size:14px"><em>The repo looks big at first (29 routes, 33 components, 9 lib files). In practice it's four tables you care about this week: <code>templates</code>, <code>assessments</code>, <code>responses</code>, <code>llm_keys</code>. Everything else is auth/credits scaffolding. Nail the loop, then add scaffolding.</em></p>
+  </div>
+
+  <!-- Retrieval practice -->
+  <div class="card" id="quiz">
+    <div class="eyebrow">Retrieval — make it stick</div>
+    <h2>Check yourself (no peeking)</h2>
+    <p class="muted" style="font-size:13px">Effortful recall builds storage strength. Pick, get feedback instantly. All choices are the same length on purpose — no formatting clues.</p>
+
+    <div class="quiz" data-quiz="q1">
+      <div class="quiz-head"><strong>Q1 — The loop</strong><span class="muted" style="font-size:12px">1 / 4</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">Which order is the core product loop?</p>
+        <div class="choices">
+          <button class="choice" data-correct="false">Response → Template → Assessment → Report</button>
+          <button class="choice" data-correct="true">Template → Assessment → Response → Report</button>
+          <button class="choice" data-correct="false">Assessment → Template → Report → Response</button>
+          <button class="choice" data-correct="false">Template → Response → Assessment → Report</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+
+    <div class="quiz" data-quiz="q2">
+      <div class="quiz-head"><strong>Q2 — Where mutations live</strong><span class="muted" style="font-size:12px">2 / 4</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">Where do data mutations belong in this repo?</p>
+        <div class="choices">
+          <button class="choice" data-correct="false">REST handlers in app/api/*/route.ts files</button>
+          <button class="choice" data-correct="false">Direct Drizzle calls inside components/*</button>
+          <button class="choice" data-correct="true">Server actions in app/actions/*.ts files</button>
+          <button class="choice" data-correct="false">Middleware in lib/db/index.ts pool hooks</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+
+    <div class="quiz" data-quiz="q3">
+      <div class="quiz-head"><strong>Q3 — Public vs authed</strong><span class="muted" style="font-size:12px">3 / 4</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">Which route is intentionally public (no login)?</p>
+        <div class="choices">
+          <button class="choice" data-correct="false">/dashboard — shows stats for the user</button>
+          <button class="choice" data-correct="true">/respond/[token] — submit via invite token</button>
+          <button class="choice" data-correct="false">/gallery — lists public templates only</button>
+          <button class="choice" data-correct="false">/reports — shows assessment rollups view</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+
+    <div class="quiz" data-quiz="q4">
+      <div class="quiz-head"><strong>Q4 — Drizzle vs dbmate</strong><span class="muted" style="font-size:12px">4 / 4</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">What's the split between Drizzle and dbmate here?</p>
+        <div class="choices">
+          <button class="choice" data-correct="false">Drizzle migrates, dbmate runs queries daily</button>
+          <button class="choice" data-correct="false">Both handle migrations with sync checks</button>
+          <button class="choice" data-correct="true">Drizzle queries only, dbmate handles DDL</button>
+          <button class="choice" data-correct="false">dbmate queries only, Drizzle handles DDL</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+
+    <p class="muted" style="font-size:12px; margin-top:10px">Scores are not stored — this is for your memory, not for grading.</p>
+  </div>
+
+  <!-- Primary source -->
+  <div class="card">
+    <div class="eyebrow">Go deeper — one primary source</div>
+    <h2>Read the schema next</h2>
+    <p style="font-size:14px">If you read one file after this lesson, make it <a href="../../../lib/db/schema.ts"><code>lib/db/schema.ts</code></a>. It's ~200 lines and tells you every table the product cares about. Then skim <a href="../../../AGENTS.md">AGENTS.md</a> for how to work here without friction.</p>
+    <p class="muted" style="font-size:13px">Citations: loop from <code>app/actions/templates.ts</code> + <code>app/actions/assessments.ts</code> + <code>app/respond/[token]/page.tsx</code>; conventions from <code>AGENTS.md:1-15</code>; UI from <code>components.json</code> + <code>app/globals.css</code>.</p>
+  </div>
+
+  <!-- Next + help -->
+  <div class="card" id="next" style="border-style:dashed">
+    <div class="eyebrow">What's next</div>
+    <h2>Lesson 2 — Run it locally without fear</h2>
+    <p class="muted" style="font-size:14px; margin:0 0 10px">We'll get <code>pnpm dev</code> + <code>pnpm db:migrate</code> working, understand why <code>db/run.js</code> exists, and know what "merge to main auto-deploys" means for you.</p>
+    <div class="lesson-nav">
+      <span class="muted" style="font-size:13px; align-self:center">Lesson 1 of 5</span>
+      <a href="0002-local-run.html" class="btn">Next: Local run & migrations →</a>
+    </div>
+    <div class="callout" style="margin-top:14px">
+      <strong>Stuck? Ask me.</strong> I'm your teacher for this repo — ask about any file, error, or "where does X live?" and I'll trace it for you. Try: <em>"Where is inviteToken validated?"</em> or <em>"Show me how cloneTemplate blocks re-publish."</em>
+    </div>
+  </div>
+
+  <p class="muted" style="font-size:12px; text-align:center; margin:22px 0 30px">Crafted for maturity-se onboarding · <a href="../reference/glossary.html">Glossary</a> · <a href="../MISSION.md">Mission</a> · <a href="../RESOURCES.md">Resources</a></p>
+</div>
+
+<script>
+document.querySelectorAll('.quiz').forEach(quiz => {
+  const choices = quiz.querySelectorAll('.choice');
+  const feedback = quiz.querySelector('.quiz-feedback');
+  let answered = false;
+  const messages = {
+    q1: { ok: "Yes — Template (what to ask) → Assessment (who+when, with token) → Response (one jsonb blob) → Report (aggregates). That's the mental handle for the whole repo.", bad: "Not quite — the loop is Template → Assessment → Response → Report. Responses can't exist before the assessment that carries the inviteToken." },
+    q2: { ok: "Correct — server actions (\"use server\" in app/actions/*.ts) with getUserId() guards. Only app/api/auth/* is an API route, for better-auth.", bad: "This repo uses server actions for mutations (app/actions/*.ts), not API routes. See AGENTS.md: conventions." },
+    q3: { ok: "Exactly — /respond/[token] is outside app/(app)/layout.tsx's auth guard on purpose. It checks inviteToken + status === 'active'.", bad: "The public one is /respond/[token] — it's outside the (app) group's getSession() guard so respondents need no login." },
+    q4: { ok: "Right — Drizzle is query-only here; DDL lives in db/migrations/*.sql and runs via dbmate (node db/run.js dbmate up).", bad: "Flip it: Drizzle queries, dbmate migrates. That's why pnpm build chains dbmate up." },
+  };
+  choices.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (answered) return;
+      answered = true;
+      const isCorrect = btn.dataset.correct === "true";
+      const id = quiz.dataset.quiz;
+      choices.forEach(c => {
+        c.disabled = true;
+        if (c.dataset.correct === "true") c.classList.add('correct');
+        else if (c === btn && !isCorrect) c.classList.add('wrong');
+      });
+      feedback.textContent = (isCorrect ? "✓ " : "✗ ") + (isCorrect ? messages[id].ok : messages[id].bad);
+      feedback.className = "quiz-feedback show " + (isCorrect ? "ok" : "bad");
+    });
+  });
+});
+</script>
+</body>
+</html>

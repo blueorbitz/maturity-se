@@ -1,0 +1,101 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maturity-SE Onboarding Tutorial</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="topbar"><div class="shell topbar-inner">
+  <div class="brand">Maturity-SE <small>Onboarding Tutorial</small></div>
+  <nav class="nav-links">
+    <a href="reference/glossary.html">Glossary</a>
+    <a href="RESOURCES.md">Resources</a>
+    <a href="MISSION.md">Mission</a>
+  </nav>
+</div></div>
+
+<div class="shell">
+  <div class="hero">
+    <div class="kicker">New engineer? Start here.</div>
+    <h1>Maturity-SE Onboarding</h1>
+    <p>5 lessons, ~50 minutes total. Go from "I don't know what I don't know" to tracing any feature end-to-end in this repo.</p>
+    <div class="meta">
+      <span>5 lessons</span>
+      <span>Interactive quizzes</span>
+      <span>One win per lesson</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">The curriculum</div>
+    <h2>Lessons</h2>
+    <div style="display:grid; gap:10px; margin-top:12px">
+      <a href="lessons/0001-repo-map.html" class="folder" style="text-decoration:none; border:1px solid var(--border); border-radius:12px; padding:16px; display:block; transition:border-color 0.15s">
+        <div style="display:flex; align-items:center; gap:12px">
+          <div class="badge">1</div>
+          <div>
+            <h4 style="margin:0">The 60-Second Mental Model</h4>
+            <p style="margin:2px 0 0; color:var(--muted); font-size:13px">Template → Assessment → Response → Report. Learn the loop, and every folder has a place.</p>
+          </div>
+        </div>
+      </a>
+      <a href="lessons/0002-local-run.html" class="folder" style="text-decoration:none; border:1px solid var(--border); border-radius:12px; padding:16px; display:block">
+        <div style="display:flex; align-items:center; gap:12px">
+          <div class="badge alt">2</div>
+          <div>
+            <h4 style="margin:0">Run It Locally Without Fear</h4>
+            <p style="margin:2px 0 0; color:var(--muted); font-size:13px">Env vars, db/run.js wrapper, migrations, and what "merge to main auto-deploys" means.</p>
+          </div>
+        </div>
+      </a>
+      <a href="lessons/0003-db-schema.html" class="folder" style="text-decoration:none; border:1px solid var(--border); border-radius:12px; padding:16px; display:block">
+        <div style="display:flex; align-items:center; gap:12px">
+          <div class="badge">3</div>
+          <div>
+            <h4 style="margin:0">DB Schema: The Four Tables</h4>
+            <p style="margin:2px 0 0; color:var(--muted); font-size:13px">templates, assessments, responses, llm_keys. Read any Drizzle query and predict what it returns.</p>
+          </div>
+        </div>
+      </a>
+      <a href="lessons/0004-auth-guards.html" class="folder" style="text-decoration:none; border:1px solid var(--border); border-radius:12px; padding:16px; display:block">
+        <div style="display:flex; align-items:center; gap:12px">
+          <div class="badge alt">4</div>
+          <div>
+            <h4 style="margin:0">Auth Guards: Who Needs Login</h4>
+            <p style="margin:2px 0 0; color:var(--muted); font-size:13px">Layout guard vs action guard. Why /respond/[token] is public.</p>
+          </div>
+        </div>
+      </a>
+      <a href="lessons/0005-trace.html" class="folder" style="text-decoration:none; border:1px solid var(--border); border-radius:12px; padding:16px; display:block">
+        <div style="display:flex; align-items:center; gap:12px">
+          <div class="badge">5</div>
+          <div>
+            <h4 style="margin:0">End-to-End Trace</h4>
+            <p style="margin:2px 0 0; color:var(--muted); font-size:13px">Follow a template from AI generation through assessment, response, to report. Every file touched.</p>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">Reference</div>
+    <h2>Quick links</h2>
+    <div class="folder-grid" style="margin-top:10px">
+      <a href="reference/glossary.html" class="folder" style="text-decoration:none; display:block">
+        <b>Glossary</b>
+        <p style="margin:4px 0 0; font-size:13px">Living definitions for every term in the codebase.</p>
+      </a>
+      <a href="RESOURCES.md" class="folder" style="text-decoration:none; display:block">
+        <b>Resources</b>
+        <p style="margin:4px 0 0; font-size:13px">High-trust sources for deeper learning.</p>
+      </a>
+    </div>
+  </div>
+
+  <p class="muted" style="font-size:12px; text-align:center; margin:22px 0 30px">Maturity-SE Onboarding Tutorial</p>
+</div>
+</body>
+</html>

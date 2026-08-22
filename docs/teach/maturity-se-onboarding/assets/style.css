@@ -1,0 +1,142 @@
+/* maturity-se onboarding — Tufte-inspired, print-friendly */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap');
+
+:root{
+  --bg:#fdfcf9;
+  --paper:#ffffff;
+  --ink:#1a1a18;
+  --muted:#6b6b68;
+  --accent:#0f766e;
+  --accent-2:#f59e0b;
+  --border:#e8e6e0;
+  --code-bg:#f6f4ef;
+  --radius:14px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color:var(--ink);
+  background:var(--bg);
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent); text-decoration:none; border-bottom:1px solid #ccfbf1}
+a:hover{border-bottom-color:var(--accent)}
+.mono{font-family:'IBM Plex Mono', monospace}
+.serif{font-family:'Newsreader', Georgia, serif}
+
+/* layout */
+.shell{max-width:860px; margin:0 auto; padding:0 24px}
+.topbar{
+  position:sticky; top:0; z-index:10;
+  backdrop-filter:blur(10px);
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  border-bottom:1px solid var(--border);
+}
+.topbar-inner{display:flex; align-items:center; justify-content:space-between; padding:14px 0; gap:16px}
+.brand{font-weight:700; letter-spacing:-0.02em; font-size:14px}
+.brand small{display:block; font-weight:500; color:var(--muted); font-size:12px; letter-spacing:0.04em; text-transform:uppercase}
+.nav-links{display:flex; gap:10px; flex-wrap:wrap}
+.nav-links a{font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:var(--muted); border:none; background:var(--paper); border:1px solid var(--border); padding:6px 10px; border-radius:999px}
+.nav-links a:hover{color:var(--ink); border-color:var(--ink)}
+
+/* hero */
+.hero{padding:36px 0 18px; border-bottom:1px solid var(--border)}
+.kicker{font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); font-weight:700}
+.hero h1{font-family:'Newsreader', Georgia, serif; font-size:40px; line-height:1.05; letter-spacing:-0.03em; margin:10px 0 12px; font-weight:600}
+.hero p{color:var(--muted); max-width:62ch; font-size:17px; margin:0}
+.meta{display:flex; gap:14px; flex-wrap:wrap; margin-top:14px; font-size:13px; color:var(--muted)}
+.meta span{background:var(--paper); border:1px solid var(--border); padding:4px 10px; border-radius:999px}
+
+/* cards */
+.card{
+  background:var(--paper);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:22px 22px;
+  margin:18px 0;
+  box-shadow:0 1px 0 rgba(0,0,0,0.02);
+}
+.card h2{font-family:'Newsreader', Georgia, serif; font-size:22px; margin:0 0 8px; letter-spacing:-0.02em}
+.card h3{font-size:13px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin:22px 0 8px}
+.eyebrow{font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); font-weight:800; margin-bottom:6px}
+
+/* callouts */
+.callout{border-left:3px solid var(--accent); padding:12px 14px; background:#f0fdfa; border-radius:0 10px 10px 0; font-size:14px}
+.callout.warn{border-left-color:var(--accent-2); background:#fffbeb}
+.callout strong{color:var(--ink)}
+
+/* diagram */
+.diagram{
+  display:grid; gap:10px; margin:12px 0;
+}
+.step-row{
+  display:grid; grid-template-columns:36px 1fr; gap:12px; align-items:start;
+}
+.badge{
+  width:36px; height:36px; border-radius:999px; display:grid; place-items:center;
+  background:var(--ink); color:white; font-weight:700; font-size:13px; flex:none
+}
+.badge.alt{background:var(--accent)}
+.step-row h4{margin:0; font-size:15px}
+.step-row p{margin:2px 0 0; color:var(--muted); font-size:14px}
+.arrow{margin-left:18px; color:var(--muted); font-size:12px; letter-spacing:0.2em}
+
+/* folder map */
+.folder-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+@media(max-width:640px){.folder-grid{grid-template-columns:1fr}}
+.folder{
+  border:1px solid var(--border); border-radius:12px; padding:14px; background:var(--bg)
+}
+.folder b{font-size:13px}
+.folder .path{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--accent); margin:4px 0}
+.folder p{font-size:13px; color:var(--muted); margin:6px 0 0; line-height:1.5}
+
+/* code */
+pre{
+  background:var(--code-bg); border:1px solid var(--border); border-radius:10px;
+  padding:14px; overflow:auto; font-size:13px; line-height:1.55;
+}
+code{font-family:'IBM Plex Mono', monospace; font-size:0.92em}
+.inline-code{background:var(--code-bg); border:1px solid var(--border); padding:1px 6px; border-radius:6px; font-size:13px}
+
+/* quiz */
+.quiz{border:1px solid var(--border); border-radius:12px; overflow:hidden; margin:12px 0}
+.quiz-head{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:var(--bg); border-bottom:1px solid var(--border)}
+.quiz-head strong{font-size:13px; letter-spacing:0.06em; text-transform:uppercase}
+.quiz-body{padding:14px}
+.quiz-q{font-weight:600; margin:0 0 10px}
+.choices{display:grid; gap:8px}
+.choice{
+  display:flex; gap:10px; align-items:start; text-align:left;
+  border:1px solid var(--border); background:var(--paper); border-radius:10px;
+  padding:10px 12px; cursor:pointer; font-size:14px; line-height:1.45; width:100%
+}
+.choice:hover{border-color:var(--ink)}
+.choice.correct{border-color:#10b981; background:#ecfdf5}
+.choice.wrong{border-color:#ef4444; background:#fef2f2}
+.choice:disabled{cursor:default}
+.quiz-feedback{margin-top:10px; font-size:13px; padding:10px 12px; border-radius:10px; display:none}
+.quiz-feedback.show{display:block}
+.quiz-feedback.ok{background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46}
+.quiz-feedback.bad{background:#fef2f2; border:1px solid #fecaca; color:#7f1d1d}
+.muted{color:var(--muted)}
+
+/* footer nav */
+.lesson-nav{display:flex; justify-content:space-between; gap:12px; margin:22px 0 40px; flex-wrap:wrap}
+.btn{
+  appearance:none; border:1px solid var(--ink); background:var(--ink); color:white;
+  padding:10px 16px; border-radius:999px; font-weight:600; font-size:14px; cursor:pointer;
+}
+.btn.secondary{background:var(--paper); color:var(--ink)}
+.btn:hover{opacity:0.92}
+.sr{position:absolute; left:-9999px}
+
+/* print */
+@media print{
+  .topbar, .lesson-nav, .quiz, button{display:none !important}
+  body{background:white}
+  .card{box-shadow:none; break-inside:avoid}
+}
